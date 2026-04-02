@@ -493,7 +493,8 @@ var quill = new Quill('#quill-editor', {
 var currentId  = null;
 var rolesTags  = [];
 var typesTags  = [];
-var _readCounts = {};
+var _readCounts     = {};
+var _feedbackCounts = {};  // { [notifId]: { up: N, down: M } }
 
 // ═══ Auth ════════════════════════════════════════════════════════════════════════
 auth.onAuthStateChanged(function(user) {
@@ -503,6 +504,7 @@ auth.onAuthStateChanged(function(user) {
     document.getElementById('topbar-email').textContent = user.email;
     loadNotifications();
     loadReadCounts();
+    loadFeedback();
   } else {
     document.getElementById('login-screen').style.display = '';
     document.getElementById('app').style.display = 'none';
@@ -537,6 +539,22 @@ function loadNotifications() {
   });
 }
 
+function loadFeedback() {
+  db.collection('feedback').onSnapshot(function(snap) {
+    _feedbackCounts = {};
+    snap.docs.forEach(function(d) {
+      var data = d.data();
+      if (!data.notifId) return;
+      if (!_feedbackCounts[data.notifId]) _feedbackCounts[data.notifId] = { up: 0, down: 0 };
+      if (data.vote === 'up')   _feedbackCounts[data.notifId].up++;
+      else if (data.vote === 'down') _feedbackCounts[data.notifId].down++;
+    });
+    if (_allNotifs.length) renderTable(_allNotifs);
+  }, function(err) {
+    console.warn('[Admin] Feedback unavailable — check Firestore rules:', err.message);
+  });
+}
+
 function loadReadCounts() {
   db.collection('reads').onSnapshot(function(snap) {
     _allReads = snap.docs.map(function(d) { return d.data(); });
@@ -565,6 +583,8 @@ function renderTable(items) {
     var catHtml    = catDef ? '<span class="cat-pill" style="background:' + catDef.color + '">' + catDef.label + '</span>' : '<span style="color:#bbb;font-size:12px">—</span>';
     var reads      = _readCounts[n.id] || 0;
     var readHtml   = '<span class="read-count"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>' + reads + '</span>';
+    var fb         = _feedbackCounts[n.id] || { up: 0, down: 0 };
+    var feedbackHtml = '<span style="font-size:12px;color:#6b7280;white-space:nowrap">👍 ' + fb.up + ' &nbsp;👎 ' + fb.down + '</span>';
     var modeLabel  = { badge:'🔔 Badge', toast:'💬 Toast', fullscreen:'🖥 Full screen' };
     var displayLbl = modeLabel[n.displayMode] || '💬 Toast';
 
@@ -575,6 +595,7 @@ function renderTable(items) {
       '<td style="font-size:12px;color:#555">' + displayLbl + '</td>' +
       '<td>' + scheduled + '</td>' +
       '<td>' + readHtml + '</td>' +
+      '<td>' + feedbackHtml + '</td>' +
       '<td><div class="tbl-actions">' +
         '<button class="btn btn-ghost btn-sm" data-action="edit" data-id="' + esc(n.id) + '">Edit</button>' +
         '<button class="btn btn-preview btn-sm" data-action="duplicate" data-id="' + esc(n.id) + '">Duplicate</button>' +
@@ -584,7 +605,7 @@ function renderTable(items) {
     '</tr>';
   }).join('');
 
-  wrap.innerHTML = '<table><thead><tr><th>Title</th><th>Status</th><th>Category</th><th>Display</th><th>Scheduled for</th><th>Seen by</th><th>Actions</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  wrap.innerHTML = '<table><thead><tr><th>Title</th><th>Status</th><th>Category</th><th>Display</th><th>Scheduled for</th><th>Seen by</th><th>Feedback</th><th>Actions</th></tr></thead><tbody>' + rows + '</tbody></table>';
 }
 
 // ═══ Table action delegation ═════════════════════════════════════════════════════

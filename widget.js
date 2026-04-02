@@ -54,16 +54,20 @@
   // ─── State ──────────────────────────────────────────────────────────────────
   var _config        = {};
   var _allPublished  = [];   // raw Firestore docs
-  var _notifications = [];   // filtered by time, expiry, user — max 30
+  var _notifications = [];   // active: scheduled, not expired, matches user
+  var _archived      = [];   // expired notifications (for archive tab)
   var _readIds       = new Set();
+  var _feedbackGiven = {};   // { [notifId]: 'up'|'down' } persisted in localStorage
   var _db            = null;
   var _knownIds      = null;
   var _activeCategory = 'all';
+  var _showArchive    = false;
 
   // ─── Public API ─────────────────────────────────────────────────────────────
   function init(userConfig) {
     _config = Object.assign({ userId: 'anonymous', role: null, buildingType: null }, userConfig || {});
     _loadReadState();
+    _loadFeedbackState();
     _injectStyles();
     _loadFirebase(function () {
       _loadScript(DOMPURIFY_CDN, function () {
@@ -108,27 +112,31 @@
   }
 
   function _applyFilters() {
-    var now = new Date();
-    var filtered = _allPublished.filter(function (n) {
-      // Must be scheduled for now or earlier
+    var now    = new Date();
+    var active = [];
+    var expired = [];
+
+    _allPublished.forEach(function (n) {
       var t = n.scheduledFor && n.scheduledFor.toDate ? n.scheduledFor.toDate() : new Date(n.scheduledFor || 0);
-      if (t > now) return false;
-      // Must not be expired
+      if (t > now) return;          // not yet scheduled
+      if (!_matchesUser(n)) return; // wrong audience
       if (n.expiresAt) {
         var exp = n.expiresAt.toDate ? n.expiresAt.toDate() : new Date(n.expiresAt);
-        if (exp < now) return false;
+        if (exp < now) { expired.push(n); return; } // expired → archive
       }
-      return _matchesUser(n);
+      active.push(n);
     });
 
-    filtered.sort(function (a, b) {
-      var ta = a.scheduledFor && a.scheduledFor.toDate ? a.scheduledFor.toDate() : new Date(a.scheduledFor || 0);
-      var tb = b.scheduledFor && b.scheduledFor.toDate ? b.scheduledFor.toDate() : new Date(b.scheduledFor || 0);
-      return tb - ta;
-    });
+    function _sortDesc(arr) {
+      return arr.sort(function (a, b) {
+        var ta = a.scheduledFor && a.scheduledFor.toDate ? a.scheduledFor.toDate() : new Date(a.scheduledFor || 0);
+        var tb = b.scheduledFor && b.scheduledFor.toDate ? b.scheduledFor.toDate() : new Date(b.scheduledFor || 0);
+        return tb - ta;
+      });
+    }
 
-    // Limit to most recent
-    _notifications = filtered.slice(0, MAX_NOTIFICATIONS);
+    _notifications = _sortDesc(active).slice(0, MAX_NOTIFICATIONS);
+    _archived      = _sortDesc(expired).slice(0, MAX_NOTIFICATIONS);
 
     _renderCategoryFilter();
     _renderNotifications();
@@ -276,12 +284,8 @@
         border: 1px solid rgba(0,0,0,0.08);
       }
       #nw-panel.nw-open { display: flex; }
-      #nw-panel-hd {
-        padding: 14px 18px 10px; border-bottom: 1px solid #f0f0f0;
-        display: flex; align-items: center; justify-content: space-between;
-        background: #fafafa; flex-shrink: 0;
-      }
-      #nw-panel-hd h3 { margin: 0; font-size: 14px; font-weight: 700; color: #1a1a2e; }
+      #nw-panel-hd { padding: 14px 18px 0; border-bottom: 1px solid #f0f0f0; background: #fafafa; flex-shrink: 0; }
+      #nw-panel-top { display: flex; align-items: center; justify-content: space-between; padding-bottom: 10px; }
       #nw-mark-all {
         background: none; border: none; cursor: pointer; font-size: 12px;
         color: #335075; font-weight: 500; padding: 4px 8px; border-radius: 4px; font-family: inherit;
@@ -462,7 +466,24 @@
       }
       #nw-toast-title { font-size: 15px; font-weight: 700; color: #1a1a2e; margin-bottom: 6px; padding-right: 32px; line-height: 1.3; }
       #nw-toast-preview { font-size: 13px; color: #6b7280; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-      #nw-toast-cta { margin-top: 14px; font-size: 13px; color: #335075; font-weight: 600; }
+      #nw-toast-cta { margin-top: 14px; font-size: 13px; color: #335075; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+      #nw-toast-favicon { width: 14px; height: 14px; border-radius: 2px; flex-shrink: 0; }
+
+      /* ── Panel tabs ── */
+      #nw-panel-hd { padding: 14px 18px 0; border-bottom: 1px solid #f0f0f0; background: #fafafa; flex-shrink: 0; }
+      #nw-panel-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+      #nw-panel-tabs { display: flex; gap: 2px; }
+      .nw-tab { background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; font-size: 13px; font-weight: 600; color: #9ca3af; padding: 0 4px 10px; font-family: inherit; transition: color 0.12s; }
+      .nw-tab.nw-tab-active { color: #1a1a2e; border-bottom-color: #335075; }
+      .nw-tab:hover:not(.nw-tab-active) { color: #6b7280; }
+
+      /* ── Feedback buttons ── */
+      .nw-feedback { display: flex; gap: 8px; margin-left: auto; }
+      .nw-vote-btn { display: inline-flex; align-items: center; gap: 5px; background: #f9fafb; border: 1.5px solid #e5e7eb; border-radius: 8px; cursor: pointer; font-size: 13px; color: #6b7280; padding: 6px 14px; font-family: inherit; transition: all 0.12s; }
+      .nw-vote-btn:hover { border-color: #9ca3af; color: #374151; background: #f3f4f6; }
+      .nw-vote-btn.nw-voted { cursor: default; pointer-events: none; }
+      .nw-vote-btn.nw-voted-up   { background: #d1fae5; border-color: #10b981; color: #065f46; }
+      .nw-vote-btn.nw-voted-down { background: #fee2e2; border-color: #ef4444; color: #991b1b; }
     `;
     var el = document.createElement('style');
     el.id = 'nw-styles'; el.textContent = css;
@@ -492,7 +513,13 @@
     var panel = document.createElement('div');
     panel.id = 'nw-panel';
     panel.innerHTML =
-      '<div id="nw-panel-hd"><h3>What\'s new</h3><button id="nw-mark-all">Mark all read</button></div>' +
+      '<div id="nw-panel-hd">' +
+        '<div id="nw-panel-top"><h3 style="margin:0;font-size:14px;font-weight:700;color:#1a1a2e">Notifications</h3><button id="nw-mark-all">Mark all read</button></div>' +
+        '<div id="nw-panel-tabs">' +
+          '<button class="nw-tab nw-tab-active" data-tab="latest">What\'s new</button>' +
+          '<button class="nw-tab" data-tab="archive">Archive</button>' +
+        '</div>' +
+      '</div>' +
       '<div id="nw-cat-filter"></div>' +
       '<div id="nw-list"></div>';
     document.body.appendChild(panel);
@@ -507,7 +534,7 @@
           '<button id="nw-modal-close">&#x2715;</button>' +
         '</div>' +
         '<div id="nw-modal-body"></div>' +
-        '<div id="nw-modal-footer"><span id="nw-modal-time"></span></div>' +
+        '<div id="nw-modal-footer"><span id="nw-modal-time"></span><div class="nw-feedback" id="nw-modal-feedback"></div></div>' +
       '</div>';
     document.body.appendChild(overlay);
 
@@ -522,7 +549,7 @@
           '<button id="nw-fullscreen-close">&#x2715;</button>' +
         '</div>' +
         '<div id="nw-fullscreen-body"></div>' +
-        '<div id="nw-fullscreen-footer"><span id="nw-fullscreen-time"></span></div>' +
+        '<div id="nw-fullscreen-footer"><span id="nw-fullscreen-time"></span><div class="nw-feedback" id="nw-fs-feedback"></div></div>' +
       '</div>';
     document.body.appendChild(fullscreen);
 
@@ -564,6 +591,18 @@
       var n = _notifications.find(function (x) { return x.id === id; });
       if (n) { toast.classList.remove('nw-show'); _openModal(n); }
     });
+
+    document.getElementById('nw-panel-tabs').addEventListener('click', function (e) {
+      var tab = e.target.closest('[data-tab]');
+      if (!tab) return;
+      e.stopPropagation();
+      _showArchive   = tab.dataset.tab === 'archive';
+      _activeCategory = 'all';
+      panel.querySelectorAll('.nw-tab').forEach(function (t) { t.classList.remove('nw-tab-active'); });
+      tab.classList.add('nw-tab-active');
+      _renderCategoryFilter();
+      _renderNotifications();
+    });
   }
 
   // ─── Category Filter ──────────────────────────────────────────────────────────
@@ -571,9 +610,10 @@
     var wrap = document.getElementById('nw-cat-filter');
     if (!wrap) return;
 
-    // Find which categories actually appear in current notifications
+    // Find which categories actually appear in the current view
+    var source = _showArchive ? _archived : _notifications;
     var usedCats = {};
-    _notifications.forEach(function (n) { if (n.category) usedCats[n.category] = true; });
+    source.forEach(function (n) { if (n.category) usedCats[n.category] = true; });
     var cats = Object.keys(usedCats);
 
     if (cats.length === 0) { wrap.style.display = 'none'; return; }
@@ -606,24 +646,32 @@
     var list = document.getElementById('nw-list');
     if (!list) return;
 
+    var source  = _showArchive ? _archived : _notifications;
     var visible = _activeCategory === 'all'
-      ? _notifications
-      : _notifications.filter(function (n) { return n.category === _activeCategory; });
+      ? source
+      : source.filter(function (n) { return n.category === _activeCategory; });
 
     if (visible.length === 0) {
       var isFiltered = _activeCategory !== 'all';
+      var emptyTitle = _showArchive
+        ? (isFiltered ? 'No archived notifications here' : 'No archived notifications')
+        : (isFiltered ? 'No notifications here' : 'You\'re all caught up!');
+      var emptySub = _showArchive
+        ? (isFiltered ? 'Try a different category' : 'Notifications that have expired appear here')
+        : (isFiltered ? 'Try a different category' : 'New updates will appear here');
       list.innerHTML =
         '<div id="nw-empty">' +
           '<svg viewBox="0 0 24 24" fill="#1a1a2e"><path d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4a1.5 1.5 0 0 0-3 0v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>' +
-          '<div id="nw-empty-title">' + (isFiltered ? 'No notifications here' : 'You\'re all caught up!') + '</div>' +
-          '<div id="nw-empty-sub">' + (isFiltered ? 'Try a different category' : 'New updates will appear here') + '</div>' +
+          '<div id="nw-empty-title">' + emptyTitle + '</div>' +
+          '<div id="nw-empty-sub">' + emptySub + '</div>' +
         '</div>';
       return;
     }
 
     var now = new Date();
     list.innerHTML = visible.map(function (n) {
-      var unread   = !_readIds.has(n.id);
+      // Archive items always shown as read
+      var unread   = _showArchive ? false : !_readIds.has(n.id);
       var preview  = _strip(n.body || '').slice(0, 90);
       var catDef   = n.category && CATEGORIES[n.category];
       var isNew    = unread && n.scheduledFor && (now - _toDate(n.scheduledFor)) < NEW_BADGE_WINDOW_MS;
@@ -631,7 +679,10 @@
       var catHtml = catDef
         ? '<div class="nw-cat-label" style="background:' + catDef.color + '">' + catDef.label + '</div>'
         : '';
-      var newHtml = isNew ? '<span class="nw-new-badge">NEW</span>' : '';
+      var newHtml  = isNew ? '<span class="nw-new-badge">NEW</span>' : '';
+      var archiveHtml = _showArchive
+        ? '<span style="font-size:11px;color:#9ca3af;margin-top:2px;display:block">Expired ' + _relTime(n.expiresAt) + '</span>'
+        : '';
 
       return (
         '<div class="nw-item' + (unread ? ' nw-unread' : '') + '" data-id="' + n.id + '">' +
@@ -640,6 +691,7 @@
             catHtml +
             '<div class="nw-item-top"><div class="nw-title">' + _esc(n.title || 'Notification') + '</div>' + newHtml + '</div>' +
             '<div class="nw-preview">' + _esc(preview) + '</div>' +
+            archiveHtml +
           '</div>' +
           '<div class="nw-time">' + _relTime(n.scheduledFor) + '</div>' +
         '</div>'
@@ -648,7 +700,7 @@
 
     list.querySelectorAll('.nw-item').forEach(function (el) {
       el.addEventListener('click', function () {
-        var n = _notifications.find(function (x) { return x.id === el.dataset.id; });
+        var n = source.find(function (x) { return x.id === el.dataset.id; });
         if (n) _openModal(n);
       });
     });
@@ -680,8 +732,9 @@
       btn.className = 'nw-cta-btn'; btn.href = _safeUrl(n.ctaUrl);
       btn.target = '_blank'; btn.rel = 'noopener noreferrer';
       btn.textContent = n.ctaText;
-      footer.appendChild(btn);
+      footer.insertBefore(btn, footer.querySelector('.nw-feedback'));
     }
+    _renderFeedback(n.id, document.getElementById('nw-modal-feedback'));
 
     document.getElementById('nw-overlay').classList.add('nw-open');
   }
@@ -706,8 +759,9 @@
       btn.className = 'nw-cta-btn'; btn.href = _safeUrl(n.ctaUrl);
       btn.target = '_blank'; btn.rel = 'noopener noreferrer';
       btn.textContent = n.ctaText;
-      footer.appendChild(btn);
+      footer.insertBefore(btn, footer.querySelector('.nw-feedback'));
     }
+    _renderFeedback(n.id, document.getElementById('nw-fs-feedback'));
 
     document.getElementById('nw-fullscreen').classList.add('nw-open');
   }
@@ -729,6 +783,23 @@
 
     document.getElementById('nw-toast-title').textContent = n.title || 'New notification';
     document.getElementById('nw-toast-preview').textContent = _strip(n.body || '').slice(0, 100);
+
+    var ctaEl = document.getElementById('nw-toast-cta');
+    ctaEl.innerHTML = '';
+    if (n.ctaText && n.ctaUrl) {
+      try {
+        var domain = new URL(_safeUrl(n.ctaUrl)).hostname;
+        var img = document.createElement('img');
+        img.id = 'nw-toast-favicon';
+        img.src = 'https://www.google.com/s2/favicons?domain=' + domain + '&sz=32';
+        img.alt = '';
+        ctaEl.appendChild(img);
+      } catch (e) {}
+      ctaEl.appendChild(document.createTextNode(n.ctaText + ' \u2192'));
+    } else {
+      ctaEl.textContent = 'Click to read \u2192';
+    }
+
     toast.classList.add('nw-show');
   }
 
@@ -786,6 +857,65 @@
   }
   function _absTime(ts) {
     return _toDate(ts).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  // ─── Feedback ─────────────────────────────────────────────────────────────────
+
+  function _loadFeedbackState() {
+    try {
+      var raw = localStorage.getItem('notif_feedback_' + _config.userId);
+      _feedbackGiven = raw ? JSON.parse(raw) : {};
+    } catch (e) { _feedbackGiven = {}; }
+  }
+
+  function _saveFeedbackState() {
+    try {
+      localStorage.setItem('notif_feedback_' + _config.userId, JSON.stringify(_feedbackGiven));
+    } catch (e) {}
+  }
+
+  function _vote(notifId, vote) {
+    if (_feedbackGiven[notifId]) return;  // already voted
+    _feedbackGiven[notifId] = vote;
+    _saveFeedbackState();
+    if (_db) {
+      _db.collection('feedback').doc(notifId + '_' + _config.userId).set({
+        notifId:   notifId,
+        userId:    _config.userId,
+        vote:      vote,   // 'up' or 'down'
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).catch(function (err) { console.error('[NotifWidget] Feedback failed:', err.message); });
+    }
+    // Refresh buttons wherever this notification's feedback panel is open
+    var mf = document.getElementById('nw-modal-feedback');
+    if (mf && mf.dataset.nwId === notifId) _renderFeedback(notifId, mf);
+    var ff = document.getElementById('nw-fs-feedback');
+    if (ff && ff.dataset.nwId === notifId) _renderFeedback(notifId, ff);
+  }
+
+  function _renderFeedback(notifId, container) {
+    if (!container) return;
+    container.dataset.nwId = notifId;
+    var given = _feedbackGiven[notifId];
+
+    if (given) {
+      container.innerHTML =
+        '<button class="nw-vote-btn nw-voted nw-voted-' + given + '">' +
+          (given === 'up' ? '👍' : '👎') + ' Thanks!' +
+        '</button>';
+      return;
+    }
+
+    container.innerHTML =
+      '<button class="nw-vote-btn" data-vote="up">👍 Helpful</button>' +
+      '<button class="nw-vote-btn" data-vote="down">👎 Not helpful</button>';
+
+    container.querySelectorAll('.nw-vote-btn').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        _vote(notifId, btn.dataset.vote);
+      });
+    });
   }
 
   // ─── Export ───────────────────────────────────────────────────────────────────
