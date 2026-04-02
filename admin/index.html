@@ -5,271 +5,167 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Notifications Admin</title>
 
-  <!-- Quill rich text editor -->
   <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
   <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
 
-  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #f4f6f9;
-      color: #1a1a2e;
-      min-height: 100vh;
-    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f4f6f9; color: #1a1a2e; min-height: 100vh; }
 
     /* ── Login ── */
-    #login-screen {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(135deg, #1a1a2e 0%, #335075 100%);
-    }
-    .login-card {
-      background: #fff;
-      border-radius: 16px;
-      padding: 40px 36px;
-      width: 360px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-    }
-    .login-card h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; color: #1a1a2e; }
+    #login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1a1a2e 0%, #335075 100%); }
+    .login-card { background: #fff; border-radius: 16px; padding: 40px 36px; width: 360px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+    .login-card h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
     .login-card p  { font-size: 14px; color: #888; margin-bottom: 28px; }
     #login-error   { color: #e74c3c; font-size: 13px; margin-bottom: 12px; display: none; }
 
     /* ── App shell ── */
     #app { display: none; }
-
-    .topbar {
-      background: #1a1a2e;
-      color: #fff;
-      padding: 0 28px;
-      height: 58px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    }
-    .topbar h1 { font-size: 16px; font-weight: 600; letter-spacing: 0.3px; }
+    .topbar { background: #1a1a2e; color: #fff; padding: 0 28px; height: 58px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+    .topbar h1 { font-size: 16px; font-weight: 600; }
     .topbar-right { display: flex; align-items: center; gap: 16px; }
-    .topbar-user { font-size: 13px; color: #aaa; }
+    .topbar-user  { font-size: 13px; color: #aaa; }
+    .container    { max-width: 1040px; margin: 0 auto; padding: 32px 20px; }
 
-    .container { max-width: 1000px; margin: 0 auto; padding: 32px 20px; }
-
-    /* ── Dashboard ── */
-    #dashboard-view {}
-    .view-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 24px;
-    }
+    /* ── View header ── */
+    .view-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
     .view-header h2 { font-size: 20px; font-weight: 700; }
 
-    .notif-table {
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-      overflow: hidden;
-    }
+    /* ── Table ── */
+    .notif-table { background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; }
     .notif-table table { width: 100%; border-collapse: collapse; }
-    .notif-table th {
-      text-align: left;
-      padding: 12px 18px;
-      font-size: 12px;
-      font-weight: 600;
-      color: #888;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      border-bottom: 1px solid #f0f0f0;
-      background: #fafafa;
-    }
-    .notif-table td {
-      padding: 14px 18px;
-      font-size: 14px;
-      border-bottom: 1px solid #f5f5f5;
-      vertical-align: middle;
-    }
+    .notif-table th { text-align: left; padding: 12px 16px; font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #f0f0f0; background: #fafafa; }
+    .notif-table td { padding: 13px 16px; font-size: 13px; border-bottom: 1px solid #f5f5f5; vertical-align: middle; }
     .notif-table tr:last-child td { border-bottom: none; }
     .notif-table tr:hover td { background: #fafbfc; }
 
-    .status-badge {
-      display: inline-block;
-      padding: 3px 10px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-    }
+    .status-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
     .status-draft     { background: #fff3cd; color: #856404; }
     .status-published { background: #d1fae5; color: #065f46; }
-    .status-scheduled { background: #dbeafe; color: #1e40af; }
 
-    .tbl-actions { display: flex; gap: 8px; }
+    .cat-pill { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; color: #fff; }
 
-    .empty-state {
-      padding: 60px 20px;
-      text-align: center;
-      color: #bbb;
-    }
+    .read-count { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #6b7280; }
+    .read-count svg { width: 13px; height: 13px; fill: #9ca3af; }
+
+    .tbl-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    .empty-state { padding: 60px 20px; text-align: center; color: #bbb; }
     .empty-state svg { width: 48px; height: 48px; fill: #ddd; margin-bottom: 12px; }
     .empty-state p { font-size: 14px; }
 
-    /* ── Editor view ── */
+    /* ── Editor ── */
     #editor-view { display: none; }
-
-    .editor-card {
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-      padding: 28px 32px;
-    }
-
+    .editor-card { background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); padding: 28px 32px; }
     .form-group { margin-bottom: 22px; }
-    .form-group label {
-      display: block;
-      font-size: 13px;
-      font-weight: 600;
-      color: #555;
-      margin-bottom: 7px;
-    }
-    .form-group .hint { font-size: 12px; color: #aaa; margin-top: 5px; font-weight: 400; }
-
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: #555; margin-bottom: 7px; }
+    .form-group .hint { font-size: 12px; color: #aaa; margin-top: 5px; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-
     .ql-container { min-height: 200px; font-size: 15px; }
     .ql-editor    { min-height: 200px; }
 
-    .targeting-section {
-      background: #f8f9fb;
-      border: 1px solid #e8eaed;
-      border-radius: 10px;
-      padding: 18px 20px;
-      margin-bottom: 22px;
-    }
-    .targeting-section h4 { font-size: 13px; font-weight: 600; color: #555; margin-bottom: 4px; }
-    .targeting-section .desc { font-size: 12px; color: #aaa; margin-bottom: 14px; }
+    .section-box { background: #f8f9fb; border: 1px solid #e8eaed; border-radius: 10px; padding: 18px 20px; margin-bottom: 22px; }
+    .section-box h4 { font-size: 13px; font-weight: 600; color: #555; margin-bottom: 4px; }
+    .section-box .desc { font-size: 12px; color: #aaa; margin-bottom: 14px; }
 
-    .tag-input-wrapper {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      align-items: center;
-      min-height: 38px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      padding: 6px 10px;
-      background: #fff;
-      cursor: text;
-    }
+    .tag-input-wrapper { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-height: 38px; border: 1px solid #ddd; border-radius: 8px; padding: 6px 10px; background: #fff; cursor: text; }
     .tag-input-wrapper:focus-within { border-color: #335075; box-shadow: 0 0 0 3px rgba(51,80,117,0.08); }
-    .tag {
-      display: inline-flex; align-items: center; gap: 4px;
-      background: #e8f0fe; color: #335075;
-      font-size: 12px; font-weight: 500;
-      padding: 3px 8px; border-radius: 20px;
-    }
-    .tag-remove { cursor: pointer; font-size: 14px; line-height: 1; color: #335075; background: none; border: none; padding: 0; }
-    .tag-input { border: none; outline: none; font-size: 13px; min-width: 80px; flex: 1; font-family: inherit; }
+    .tag { display: inline-flex; align-items: center; gap: 4px; background: #e8f0fe; color: #335075; font-size: 12px; font-weight: 500; padding: 3px 8px; border-radius: 20px; }
+    .tag-remove { cursor: pointer; font-size: 14px; color: #335075; background: none; border: none; padding: 0; }
+    .tag-input  { border: none; outline: none; font-size: 13px; min-width: 80px; flex: 1; font-family: inherit; }
 
-    .editor-actions {
-      display: flex;
-      gap: 12px;
-      justify-content: flex-end;
-      padding-top: 20px;
-      border-top: 1px solid #f0f0f0;
-      margin-top: 4px;
-    }
+    .editor-actions { display: flex; gap: 12px; justify-content: flex-end; padding-top: 20px; border-top: 1px solid #f0f0f0; margin-top: 4px; }
+
+    /* ── Preview modal ── */
+    #preview-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: none; align-items: center; justify-content: center; padding: 20px; }
+    #preview-overlay.open { display: flex; }
+    #preview-modal { background: #fff; border-radius: 16px; width: 100%; max-width: 720px; max-height: calc(100vh - 60px); overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+    #preview-modal-hd { padding: 20px 24px 16px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: space-between; }
+    #preview-modal-hd h3 { font-size: 16px; font-weight: 700; }
+    .preview-close { background: none; border: none; cursor: pointer; font-size: 18px; color: #bbb; }
+    .preview-close:hover { color: #555; }
+    .preview-section { padding: 20px 24px; border-bottom: 1px solid #f5f5f5; }
+    .preview-section:last-child { border-bottom: none; }
+    .preview-section h4 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #9ca3af; margin-bottom: 14px; }
+    .preview-section p { font-size: 12px; color: #9ca3af; margin-top: 8px; }
+
+    /* Preview: Badge */
+    .preview-bell-wrap { display: flex; align-items: center; gap: 12px; }
+    .preview-bell { position: relative; background: #335075; border: none; border-radius: 8px; padding: 8px 10px; display: inline-flex; }
+    .preview-bell svg { width: 20px; height: 20px; fill: #fff; }
+    .preview-bell-badge { position: absolute; top: -5px; right: -5px; background: #e74c3c; color: #fff; font: bold 10px/16px sans-serif; min-width: 16px; height: 16px; border-radius: 8px; display: flex; align-items: center; justify-content: center; padding: 0 3px; border: 2px solid #fff; }
+
+    /* Preview: Toast */
+    .preview-toast { background: #fff; border-radius: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.12); padding: 18px 18px 16px; border-left: 5px solid #335075; max-width: 360px; position: relative; }
+    .preview-toast-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #335075; margin-bottom: 6px; }
+    .preview-toast-cat   { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; color: #fff; margin-bottom: 6px; text-transform: uppercase; }
+    .preview-toast-title { font-size: 15px; font-weight: 700; color: #1a1a2e; margin-bottom: 5px; }
+    .preview-toast-body  { font-size: 13px; color: #6b7280; line-height: 1.4; }
+    .preview-toast-cta   { margin-top: 12px; font-size: 13px; color: #335075; font-weight: 600; }
+    .preview-close-btn   { position: absolute; top: 10px; right: 12px; background: #f3f4f6; border: none; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #6b7280; cursor: pointer; }
+
+    /* Preview: Fullscreen card */
+    .preview-fullscreen { border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); max-width: 560px; }
+    .preview-fs-top { background: linear-gradient(135deg, #335075, #1a1a2e); padding: 22px 24px 18px; }
+    .preview-fs-cat { display: inline-block; background: rgba(255,255,255,0.2); color: #fff; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 3px 10px; border-radius: 20px; margin-bottom: 10px; }
+    .preview-fs-title { color: #fff; font-size: 18px; font-weight: 700; }
+    .preview-fs-body  { background: #fff; padding: 18px 24px; font-size: 14px; color: #444; line-height: 1.6; }
+    .preview-fs-body p { margin: 0 0 8px; }
 
     /* ── Buttons ── */
-    .btn {
-      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-      padding: 9px 18px; border-radius: 8px; font-size: 14px; font-weight: 600;
-      cursor: pointer; border: none; transition: all 0.15s; font-family: inherit;
-      text-decoration: none;
-    }
-    .btn-primary   { background: #335075; color: #fff; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 18px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; font-family: inherit; text-decoration: none; }
+    .btn-primary { background: #335075; color: #fff; }
     .btn-primary:hover { background: #2a4163; }
-    .btn-success   { background: #10b981; color: #fff; }
+    .btn-success { background: #10b981; color: #fff; }
     .btn-success:hover { background: #059669; }
-    .btn-ghost     { background: transparent; color: #555; border: 1px solid #ddd; }
+    .btn-ghost   { background: transparent; color: #555; border: 1px solid #ddd; }
     .btn-ghost:hover { background: #f5f5f5; }
-    .btn-danger    { background: transparent; color: #e74c3c; border: 1px solid #fca5a5; }
+    .btn-danger  { background: transparent; color: #e74c3c; border: 1px solid #fca5a5; }
     .btn-danger:hover { background: #fef2f2; }
-    .btn-sm        { padding: 6px 12px; font-size: 12px; }
-    .btn:disabled  { opacity: 0.5; cursor: not-allowed; }
+    .btn-preview { background: transparent; color: #7c3aed; border: 1px solid #c4b5fd; }
+    .btn-preview:hover { background: #f5f3ff; }
+    .btn-sm      { padding: 6px 12px; font-size: 12px; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    /* ── Form fields ── */
     input[type="text"], input[type="email"], input[type="password"],
     input[type="datetime-local"], input[type="url"] {
       width: 100%; padding: 9px 13px; border: 1px solid #ddd; border-radius: 8px;
-      font-size: 14px; font-family: inherit; color: #1a1a2e;
-      transition: border 0.15s, box-shadow 0.15s;
+      font-size: 14px; font-family: inherit; color: #1a1a2e; transition: border 0.15s;
     }
-    input:focus {
-      outline: none; border-color: #335075;
-      box-shadow: 0 0 0 3px rgba(51,80,117,0.1);
-    }
-
-    select {
-      width: 100%; padding: 9px 13px; border: 1px solid #ddd; border-radius: 8px;
-      font-size: 14px; font-family: inherit; color: #1a1a2e; background: #fff;
-    }
+    input:focus { outline: none; border-color: #335075; box-shadow: 0 0 0 3px rgba(51,80,117,0.1); }
+    select { width: 100%; padding: 9px 13px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; font-family: inherit; color: #1a1a2e; background: #fff; }
     select:focus { outline: none; border-color: #335075; }
 
     /* ── Toast ── */
-    #admin-toast {
-      position: fixed; bottom: 24px; right: 24px;
-      background: #1a1a2e; color: #fff;
-      padding: 12px 20px; border-radius: 10px;
-      font-size: 13px; font-weight: 500;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-      z-index: 9999; display: none;
-      animation: toast-in 0.25s ease;
-    }
-    @keyframes toast-in {
-      from { transform: translateY(8px); opacity: 0; }
-      to   { transform: translateY(0);   opacity: 1; }
-    }
+    #admin-toast { position: fixed; bottom: 24px; right: 24px; background: #1a1a2e; color: #fff; padding: 12px 20px; border-radius: 10px; font-size: 13px; font-weight: 500; box-shadow: 0 8px 24px rgba(0,0,0,0.2); z-index: 9999; display: none; animation: toast-in 0.25s ease; }
+    @keyframes toast-in { from { transform: translateY(8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     #admin-toast.success { background: #10b981; }
     #admin-toast.error   { background: #e74c3c; }
 
-    /* ── Loader ── */
-    .spinner {
-      display: inline-block; width: 18px; height: 18px;
-      border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
-      border-radius: 50%; animation: spin 0.6s linear infinite;
-    }
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── Responsive ── */
-    @media (max-width: 600px) {
-      .form-row { grid-template-columns: 1fr; }
-      .editor-card { padding: 20px 16px; }
-    }
+    @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } .editor-card { padding: 20px 16px; } }
   </style>
 </head>
 <body>
 
-<!-- ═══ LOGIN SCREEN ════════════════════════════════════════════════════════ -->
+<!-- ═══ LOGIN ════════════════════════════════════════════════════════════════ -->
 <div id="login-screen">
   <div class="login-card">
     <h1>Notifications Admin</h1>
     <p>Sign in to manage notifications</p>
     <div id="login-error"></div>
     <div class="form-group">
-      <label for="login-email">Email</label>
+      <label>Email</label>
       <input type="email" id="login-email" placeholder="you@company.com" autocomplete="email">
     </div>
     <div class="form-group">
-      <label for="login-password">Password</label>
+      <label>Password</label>
       <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
     </div>
     <button class="btn btn-primary" id="login-btn" style="width:100%">Sign in</button>
@@ -295,7 +191,7 @@
         <button class="btn btn-primary" id="new-btn">+ New notification</button>
       </div>
       <div class="notif-table" id="notif-table-wrap">
-        <div class="empty-state" id="table-loading">
+        <div class="empty-state">
           <div class="spinner" style="border-color:rgba(51,80,117,0.2);border-top-color:#335075;width:28px;height:28px;margin:0 auto 12px;"></div>
           <p>Loading…</p>
         </div>
@@ -311,86 +207,151 @@
       <div class="editor-card">
 
         <div class="form-group">
-          <label for="f-title">Title <span style="color:#e74c3c">*</span></label>
+          <label>Title <span style="color:#e74c3c">*</span></label>
           <input type="text" id="f-title" placeholder="e.g. New feature: Mobile app improvements">
         </div>
 
         <div class="form-group">
           <label>Message body <span style="color:#e74c3c">*</span></label>
           <div id="quill-editor"></div>
-          <div class="hint">Supports bold, italic, headings, bullet lists, links and images.</div>
+          <div class="hint">Supports bold, italic, headings, lists, links and images.</div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
-            <label for="f-schedule">Publish date &amp; time <span style="color:#e74c3c">*</span></label>
+            <label>Publish date &amp; time <span style="color:#e74c3c">*</span></label>
             <input type="datetime-local" id="f-schedule">
-            <div class="hint">The notification will appear on your site at this time.</div>
+            <div class="hint">Notification appears on your site at this time.</div>
           </div>
           <div class="form-group">
-            <label for="f-status">Status</label>
+            <label>Expiry date &amp; time</label>
+            <input type="datetime-local" id="f-expires">
+            <div class="hint">Optional. Notification disappears automatically after this time.</div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Status</label>
             <select id="f-status">
               <option value="draft">Draft — save without publishing</option>
               <option value="published">Published — go live at the time above</option>
             </select>
           </div>
+          <div class="form-group">
+            <label>Category</label>
+            <select id="f-category">
+              <option value="">No category</option>
+              <option value="new-feature">New feature</option>
+              <option value="announcement">Announcement</option>
+              <option value="tip">Tip</option>
+              <option value="maintenance">Maintenance</option>
+              <option value="update">Update</option>
+            </select>
+          </div>
         </div>
 
         <div class="form-group">
-          <label for="f-display-mode">How to display to users</label>
+          <label>How to display to users</label>
           <select id="f-display-mode">
             <option value="badge">Badge only — silent, just updates the bell counter</option>
-            <option value="toast" selected>Toast — slide-in notification in the corner of the screen</option>
-            <option value="fullscreen">Full screen — large overlay that covers the page</option>
+            <option value="toast" selected>Toast — slide-in notification in the corner</option>
+            <option value="fullscreen">Full screen — large overlay covering the page</option>
           </select>
-          <div class="hint">Controls what happens when the notification first appears for a user.</div>
+          <div class="hint">Controls the automatic popup when the notification first appears.</div>
         </div>
 
         <!-- CTA Button -->
-        <div class="targeting-section">
+        <div class="section-box">
           <h4>Call-to-action button <span style="font-weight:400;color:#aaa">(optional)</span></h4>
           <div class="desc">Add a button at the bottom of the notification that links somewhere.</div>
           <div class="form-row">
             <div class="form-group" style="margin-bottom:0">
-              <label for="f-cta-text">Button label</label>
+              <label>Button label</label>
               <input type="text" id="f-cta-text" placeholder="e.g. Learn more, Try it now">
             </div>
             <div class="form-group" style="margin-bottom:0">
-              <label for="f-cta-url">Button URL</label>
+              <label>Button URL</label>
               <input type="url" id="f-cta-url" placeholder="https://...">
             </div>
           </div>
         </div>
 
         <!-- Targeting -->
-        <div class="targeting-section">
+        <div class="section-box">
           <h4>Audience targeting <span style="font-weight:400;color:#aaa">(optional)</span></h4>
           <div class="desc">Leave blank to show to everyone. Add values to target specific users.</div>
-
           <div class="form-row">
             <div class="form-group" style="margin-bottom:0">
               <label>Target roles</label>
               <div class="tag-input-wrapper" id="roles-wrapper">
                 <input class="tag-input" id="roles-input" placeholder="e.g. admin, installer" autocomplete="off">
               </div>
-              <div class="hint">Press Enter or comma to add. Matches the <code>role</code> passed in <code>NotifWidget.init()</code>.</div>
+              <div class="hint">Press Enter or comma to add. Matches <code>role</code> in <code>NotifWidget.init()</code>.</div>
             </div>
             <div class="form-group" style="margin-bottom:0">
               <label>Target building types</label>
               <div class="tag-input-wrapper" id="types-wrapper">
                 <input class="tag-input" id="types-input" placeholder="e.g. hotel, residential" autocomplete="off">
               </div>
-              <div class="hint">Matches the <code>buildingType</code> passed in <code>NotifWidget.init()</code>.</div>
+              <div class="hint">Matches <code>buildingType</code> in <code>NotifWidget.init()</code>.</div>
             </div>
           </div>
         </div>
 
         <div class="editor-actions">
-          <button class="btn btn-ghost" id="cancel-btn">Cancel</button>
-          <button class="btn btn-ghost" id="save-draft-btn">Save as draft</button>
-          <button class="btn btn-success" id="publish-btn">Publish</button>
+          <button class="btn btn-ghost"    id="cancel-btn">Cancel</button>
+          <button class="btn btn-preview"  id="preview-btn">Preview</button>
+          <button class="btn btn-ghost"    id="save-draft-btn">Save as draft</button>
+          <button class="btn btn-success"  id="publish-btn">Publish</button>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
 
+<!-- ═══ PREVIEW MODAL ════════════════════════════════════════════════════════ -->
+<div id="preview-overlay">
+  <div id="preview-modal">
+    <div id="preview-modal-hd">
+      <h3>Preview notification</h3>
+      <button class="preview-close" id="preview-close-btn">&#x2715;</button>
+    </div>
+
+    <!-- Badge preview -->
+    <div class="preview-section">
+      <h4>Badge mode — silent update</h4>
+      <div class="preview-bell-wrap">
+        <div class="preview-bell">
+          <svg viewBox="0 0 24 24"><path d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4a1.5 1.5 0 0 0-3 0v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+          <span class="preview-bell-badge">1</span>
+        </div>
+        <span style="font-size:13px;color:#6b7280;">A badge appears on the bell icon. No popup.</span>
+      </div>
+    </div>
+
+    <!-- Toast preview -->
+    <div class="preview-section">
+      <h4>Toast mode — corner notification</h4>
+      <div class="preview-toast">
+        <div class="preview-close-btn">✕</div>
+        <div class="preview-toast-label">What's new</div>
+        <div class="preview-toast-cat" id="pv-toast-cat" style="display:none"></div>
+        <div class="preview-toast-title" id="pv-toast-title">Notification title</div>
+        <div class="preview-toast-body"  id="pv-toast-body">Notification preview text…</div>
+        <div class="preview-toast-cta">Click to read →</div>
+      </div>
+    </div>
+
+    <!-- Fullscreen preview -->
+    <div class="preview-section">
+      <h4>Full screen mode — page overlay</h4>
+      <div class="preview-fullscreen">
+        <div class="preview-fs-top">
+          <div class="preview-fs-cat" id="pv-fs-cat">What's new</div>
+          <div class="preview-fs-title" id="pv-fs-title">Notification title</div>
+        </div>
+        <div class="preview-fs-body" id="pv-fs-body"></div>
       </div>
     </div>
   </div>
@@ -400,7 +361,16 @@
 <div id="admin-toast"></div>
 
 <script>
-// ═══ Firebase init ════════════════════════════════════════════════════════════
+// ═══ Category definitions ══════════════════════════════════════════════════════
+var CATEGORIES = {
+  'new-feature':  { label: 'New feature',  color: '#0d6eaa' },
+  'announcement': { label: 'Announcement', color: '#8b5cf6' },
+  'tip':          { label: 'Tip',          color: '#10b981' },
+  'maintenance':  { label: 'Maintenance',  color: '#f59e0b' },
+  'update':       { label: 'Update',       color: '#06b6d4' }
+};
+
+// ═══ Firebase init ══════════════════════════════════════════════════════════════
 firebase.initializeApp({
   apiKey: "AIzaSyCgHb1-BU3CGFXYlK0pAfRJ5Qg6vl0QIEk",
   authDomain: "notification-poc-10791.firebaseapp.com",
@@ -412,33 +382,27 @@ firebase.initializeApp({
 var db   = firebase.firestore();
 var auth = firebase.auth();
 
-// ═══ Quill editor ════════════════════════════════════════════════════════════
+// ═══ Quill ══════════════════════════════════════════════════════════════════════
 var quill = new Quill('#quill-editor', {
   theme: 'snow',
   placeholder: 'Write your notification message here…',
-  modules: {
-    toolbar: [
-      [{ header: [1, 2, 3, false] }],
-      ['bold', 'italic', 'underline'],
-      [{ list: 'ordered' }, { list: 'bullet' }],
-      ['link', 'image'],
-      ['clean']
-    ]
-  }
+  modules: { toolbar: [[{ header: [1,2,3,false] }], ['bold','italic','underline'], [{ list:'ordered' },{ list:'bullet' }], ['link','image'], ['clean']] }
 });
 
-// ═══ State ════════════════════════════════════════════════════════════════════
-var currentId     = null;   // null = creating new
-var rolesTags     = [];
-var typesTags     = [];
+// ═══ State ══════════════════════════════════════════════════════════════════════
+var currentId  = null;
+var rolesTags  = [];
+var typesTags  = [];
+var _readCounts = {};
 
-// ═══ Auth ════════════════════════════════════════════════════════════════════
+// ═══ Auth ════════════════════════════════════════════════════════════════════════
 auth.onAuthStateChanged(function(user) {
   if (user) {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     document.getElementById('topbar-email').textContent = user.email;
     loadNotifications();
+    loadReadCounts();
   } else {
     document.getElementById('login-screen').style.display = '';
     document.getElementById('app').style.display = 'none';
@@ -450,94 +414,77 @@ document.getElementById('login-btn').addEventListener('click', function() {
   var pass  = document.getElementById('login-password').value;
   var errEl = document.getElementById('login-error');
   var btn   = this;
-
   errEl.style.display = 'none';
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>';
-
-  auth.signInWithEmailAndPassword(email, pass)
-    .catch(function(err) {
-      errEl.textContent = err.message;
-      errEl.style.display = 'block';
-      btn.disabled = false;
-      btn.textContent = 'Sign in';
-    });
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  auth.signInWithEmailAndPassword(email, pass).catch(function(err) {
+    errEl.textContent = err.message; errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Sign in';
+  });
 });
+document.getElementById('login-password').addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('login-btn').click(); });
+document.getElementById('logout-btn').addEventListener('click', function() { auth.signOut(); });
 
-document.getElementById('login-password').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') document.getElementById('login-btn').click();
-});
-
-document.getElementById('logout-btn').addEventListener('click', function() {
-  auth.signOut();
-});
-
-// ═══ Load notifications ═══════════════════════════════════════════════════════
+// ═══ Load notifications ══════════════════════════════════════════════════════════
 function loadNotifications() {
-  db.collection('notifications')
-    .orderBy('createdAt', 'desc')
-    .onSnapshot(function(snapshot) {
-      renderTable(snapshot.docs.map(function(d) { return Object.assign({ id: d.id }, d.data()); }));
-    }, function(err) {
-      console.error(err);
-      toast('Failed to load notifications', 'error');
+  db.collection('notifications').orderBy('createdAt','desc').onSnapshot(function(snapshot) {
+    renderTable(snapshot.docs.map(function(d) { return Object.assign({ id: d.id }, d.data()); }));
+  });
+}
+
+function loadReadCounts() {
+  db.collection('reads').get().then(function(snap) {
+    _readCounts = {};
+    snap.docs.forEach(function(doc) {
+      var nid = doc.data().notifId;
+      if (nid) _readCounts[nid] = (_readCounts[nid] || 0) + 1;
     });
+    // Trigger re-render if table already loaded
+    var wrap = document.getElementById('notif-table-wrap');
+    if (wrap.querySelector('table')) {
+      db.collection('notifications').orderBy('createdAt','desc').get().then(function(s) {
+        renderTable(s.docs.map(function(d) { return Object.assign({ id: d.id }, d.data()); }));
+      });
+    }
+  }).catch(function() {});
 }
 
 function renderTable(items) {
   var wrap = document.getElementById('notif-table-wrap');
   if (items.length === 0) {
-    wrap.innerHTML =
-      '<div class="empty-state">' +
-        '<svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/></svg>' +
-        '<p>No notifications yet. Create your first one!</p>' +
-      '</div>';
+    wrap.innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/></svg><p>No notifications yet. Create your first one!</p></div>';
     return;
   }
 
   var rows = items.map(function(n) {
-    var scheduled = n.scheduledFor ? fmtDate(n.scheduledFor) : '—';
-    var statusCls  = n.status === 'published' ? 'status-published' :
-                     n.status === 'scheduled' ? 'status-scheduled' : 'status-draft';
-    var targeting = [];
-    if (n.targetRoles && n.targetRoles.length) targeting.push(n.targetRoles.join(', '));
-    if (n.targetBuildingTypes && n.targetBuildingTypes.length) targeting.push(n.targetBuildingTypes.join(', '));
-    var modeLabel = { badge: '🔔 Badge', toast: '💬 Toast', fullscreen: '🖥 Full screen' };
-    var displayLabel = modeLabel[n.displayMode] || '💬 Toast';
+    var scheduled  = n.scheduledFor ? fmtDate(n.scheduledFor) : '—';
+    var statusCls  = n.status === 'published' ? 'status-published' : 'status-draft';
+    var catDef     = n.category && CATEGORIES[n.category];
+    var catHtml    = catDef ? '<span class="cat-pill" style="background:' + catDef.color + '">' + catDef.label + '</span>' : '<span style="color:#bbb;font-size:12px">—</span>';
+    var reads      = _readCounts[n.id] || 0;
+    var readHtml   = '<span class="read-count"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>' + reads + '</span>';
+    var modeLabel  = { badge:'🔔 Badge', toast:'💬 Toast', fullscreen:'🖥 Full screen' };
+    var displayLbl = modeLabel[n.displayMode] || '💬 Toast';
 
     return '<tr>' +
       '<td><strong>' + esc(n.title || '(no title)') + '</strong></td>' +
       '<td><span class="status-badge ' + statusCls + '">' + (n.status || 'draft') + '</span></td>' +
+      '<td>' + catHtml + '</td>' +
+      '<td style="font-size:12px;color:#555">' + displayLbl + '</td>' +
       '<td>' + scheduled + '</td>' +
-      '<td style="font-size:12px;color:#555">' + displayLabel + '</td>' +
-      '<td style="color:#aaa;font-size:12px">' + (targeting.join(' · ') || 'Everyone') + '</td>' +
-      '<td>' +
-        '<div class="tbl-actions">' +
-          '<button class="btn btn-ghost btn-sm" onclick="editNotif(\'' + n.id + '\')">Edit</button>' +
-          (n.status !== 'published'
-            ? '<button class="btn btn-success btn-sm" onclick="publishNotif(\'' + n.id + '\')">Publish</button>'
-            : '') +
-          '<button class="btn btn-danger btn-sm" onclick="deleteNotif(\'' + n.id + '\')">Delete</button>' +
-        '</div>' +
-      '</td>' +
+      '<td>' + readHtml + '</td>' +
+      '<td><div class="tbl-actions">' +
+        '<button class="btn btn-ghost btn-sm" onclick="editNotif(\'' + n.id + '\')">Edit</button>' +
+        '<button class="btn btn-preview btn-sm" onclick="duplicateNotif(\'' + n.id + '\')">Duplicate</button>' +
+        (n.status !== 'published' ? '<button class="btn btn-success btn-sm" onclick="publishNotif(\'' + n.id + '\')">Publish</button>' : '') +
+        '<button class="btn btn-danger btn-sm" onclick="deleteNotif(\'' + n.id + '\')">Delete</button>' +
+      '</div></td>' +
     '</tr>';
   }).join('');
 
-  wrap.innerHTML =
-    '<table>' +
-      '<thead><tr>' +
-        '<th>Title</th>' +
-        '<th>Status</th>' +
-        '<th>Scheduled for</th>' +
-        '<th>Display</th>' +
-        '<th>Audience</th>' +
-        '<th>Actions</th>' +
-      '</tr></thead>' +
-      '<tbody>' + rows + '</tbody>' +
-    '</table>';
+  wrap.innerHTML = '<table><thead><tr><th>Title</th><th>Status</th><th>Category</th><th>Display</th><th>Scheduled for</th><th>Seen by</th><th>Actions</th></tr></thead><tbody>' + rows + '</tbody></table>';
 }
 
-// ═══ Navigation ═══════════════════════════════════════════════════════════════
+// ═══ Navigation ══════════════════════════════════════════════════════════════════
 document.getElementById('new-btn').addEventListener('click', function() { openEditor(null); });
 document.getElementById('back-btn').addEventListener('click', showDashboard);
 document.getElementById('cancel-btn').addEventListener('click', showDashboard);
@@ -550,30 +497,28 @@ function showDashboard() {
 function openEditor(notif) {
   currentId = notif ? notif.id : null;
   document.getElementById('editor-title').textContent = notif ? 'Edit Notification' : 'New Notification';
-
-  // Reset form
-  document.getElementById('f-title').value = notif ? (notif.title || '') : '';
-  quill.root.innerHTML = notif ? (notif.body || '') : '';
-  document.getElementById('f-status').value = notif ? (notif.status || 'draft') : 'draft';
+  document.getElementById('f-title').value        = notif ? (notif.title || '') : '';
+  quill.root.innerHTML                             = notif ? (notif.body || '') : '';
+  document.getElementById('f-status').value       = notif ? (notif.status || 'draft') : 'draft';
+  document.getElementById('f-category').value     = notif ? (notif.category || '') : '';
   document.getElementById('f-display-mode').value = notif ? (notif.displayMode || 'toast') : 'toast';
-  document.getElementById('f-cta-text').value = notif ? (notif.ctaText || '') : '';
-  document.getElementById('f-cta-url').value = notif ? (notif.ctaUrl || '') : '';
+  document.getElementById('f-cta-text').value     = notif ? (notif.ctaText || '') : '';
+  document.getElementById('f-cta-url').value      = notif ? (notif.ctaUrl || '') : '';
 
-  // Schedule
   if (notif && notif.scheduledFor) {
-    var d = notif.scheduledFor.toDate ? notif.scheduledFor.toDate() : new Date(notif.scheduledFor);
-    document.getElementById('f-schedule').value = toLocalDatetimeInput(d);
+    document.getElementById('f-schedule').value = toLocalDt(notif.scheduledFor.toDate ? notif.scheduledFor.toDate() : new Date(notif.scheduledFor));
   } else {
-    // Default to now + 1 hour
-    var def = new Date(Date.now() + 3600000);
-    document.getElementById('f-schedule').value = toLocalDatetimeInput(def);
+    document.getElementById('f-schedule').value = toLocalDt(new Date(Date.now() + 3600000));
+  }
+  if (notif && notif.expiresAt) {
+    document.getElementById('f-expires').value = toLocalDt(notif.expiresAt.toDate ? notif.expiresAt.toDate() : new Date(notif.expiresAt));
+  } else {
+    document.getElementById('f-expires').value = '';
   }
 
-  // Tags
   rolesTags = notif && notif.targetRoles ? notif.targetRoles.slice() : [];
   typesTags = notif && notif.targetBuildingTypes ? notif.targetBuildingTypes.slice() : [];
-  renderTags('roles');
-  renderTags('types');
+  renderTags('roles'); renderTags('types');
 
   document.getElementById('dashboard-view').style.display = 'none';
   document.getElementById('editor-view').style.display = 'block';
@@ -586,15 +531,24 @@ function editNotif(id) {
   });
 }
 
-// ═══ Tag inputs ═══════════════════════════════════════════════════════════════
+function duplicateNotif(id) {
+  db.collection('notifications').doc(id).get().then(function(doc) {
+    if (!doc.exists) return;
+    var data = Object.assign({}, doc.data());
+    delete data.id;
+    data.title = (data.title || '') + ' (copy)';
+    data.status = 'draft';
+    openEditor(data); // open as new (no id)
+    currentId = null;
+  });
+}
+
+// ═══ Tags ════════════════════════════════════════════════════════════════════════
 function renderTags(type) {
-  var tags   = type === 'roles' ? rolesTags : typesTags;
+  var tags    = type === 'roles' ? rolesTags : typesTags;
   var wrapper = document.getElementById(type + '-wrapper');
   var input   = document.getElementById(type + '-input');
-
-  // Remove existing tag elements
   wrapper.querySelectorAll('.tag').forEach(function(el) { el.remove(); });
-
   tags.forEach(function(tag, i) {
     var el = document.createElement('span');
     el.className = 'tag';
@@ -606,31 +560,22 @@ function renderTags(type) {
 document.getElementById('roles-wrapper').addEventListener('click', function() { document.getElementById('roles-input').focus(); });
 document.getElementById('types-wrapper').addEventListener('click', function() { document.getElementById('types-input').focus(); });
 
-['roles', 'types'].forEach(function(type) {
+['roles','types'].forEach(function(type) {
   var input = document.getElementById(type + '-input');
   input.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault();
-      addTag(type, input.value);
-    } else if (e.key === 'Backspace' && input.value === '') {
+    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(type, input.value); }
+    else if (e.key === 'Backspace' && input.value === '') {
       var tags = type === 'roles' ? rolesTags : typesTags;
-      if (tags.length) {
-        tags.pop();
-        renderTags(type);
-      }
+      if (tags.length) { tags.pop(); renderTags(type); }
     }
   });
-  input.addEventListener('blur', function() {
-    if (input.value.trim()) addTag(type, input.value);
-  });
+  input.addEventListener('blur', function() { if (input.value.trim()) addTag(type, input.value); });
 });
 
 document.addEventListener('click', function(e) {
   if (e.target.classList.contains('tag-remove')) {
-    var type = e.target.dataset.type;
-    var i    = parseInt(e.target.dataset.i, 10);
-    var tags = type === 'roles' ? rolesTags : typesTags;
-    tags.splice(i, 1);
+    var type = e.target.dataset.type, i = parseInt(e.target.dataset.i, 10);
+    (type === 'roles' ? rolesTags : typesTags).splice(i, 1);
     renderTags(type);
   }
 });
@@ -638,71 +583,57 @@ document.addEventListener('click', function(e) {
 function addTag(type, raw) {
   var tags  = type === 'roles' ? rolesTags : typesTags;
   var input = document.getElementById(type + '-input');
-  var val   = raw.replace(/,/g, '').trim().toLowerCase();
-  if (val && tags.indexOf(val) === -1) {
-    tags.push(val);
-    renderTags(type);
-  }
+  var val   = raw.replace(/,/g,'').trim().toLowerCase();
+  if (val && tags.indexOf(val) === -1) { tags.push(val); renderTags(type); }
   input.value = '';
 }
 
-// ═══ Save ════════════════════════════════════════════════════════════════════
+// ═══ Save ════════════════════════════════════════════════════════════════════════
 document.getElementById('save-draft-btn').addEventListener('click', function() { saveNotif('draft'); });
 document.getElementById('publish-btn').addEventListener('click', function() { saveNotif('published'); });
 
 function saveNotif(overrideStatus) {
-  var title   = document.getElementById('f-title').value.trim();
-  var body    = quill.root.innerHTML;
+  var title    = document.getElementById('f-title').value.trim();
+  var body     = quill.root.innerHTML;
   var schedRaw = document.getElementById('f-schedule').value;
-  var status  = overrideStatus || document.getElementById('f-status').value;
+  var expRaw   = document.getElementById('f-expires').value;
+  var status   = overrideStatus || document.getElementById('f-status').value;
 
-  if (!title) { toast('Please enter a title.', 'error'); return; }
+  if (!title)    { toast('Please enter a title.', 'error'); return; }
   if (!schedRaw) { toast('Please set a publish date.', 'error'); return; }
 
-  var scheduledFor = firebase.firestore.Timestamp.fromDate(new Date(schedRaw));
   var user = auth.currentUser;
-
-  var ctaText = document.getElementById('f-cta-text').value.trim();
-  var ctaUrl  = document.getElementById('f-cta-url').value.trim();
-
   var data = {
-    title: title,
-    body: body,
-    status: status,
-    scheduledFor: scheduledFor,
-    displayMode: document.getElementById('f-display-mode').value,
-    ctaText: ctaText,
-    ctaUrl: ctaUrl,
-    targetRoles: rolesTags,
+    title:               title,
+    body:                body,
+    status:              status,
+    scheduledFor:        firebase.firestore.Timestamp.fromDate(new Date(schedRaw)),
+    expiresAt:           expRaw ? firebase.firestore.Timestamp.fromDate(new Date(expRaw)) : null,
+    category:            document.getElementById('f-category').value,
+    displayMode:         document.getElementById('f-display-mode').value,
+    ctaText:             document.getElementById('f-cta-text').value.trim(),
+    ctaUrl:              document.getElementById('f-cta-url').value.trim(),
+    targetRoles:         rolesTags,
     targetBuildingTypes: typesTags,
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-    updatedBy: user ? user.email : 'unknown'
+    updatedAt:           firebase.firestore.FieldValue.serverTimestamp(),
+    updatedBy:           user ? user.email : 'unknown'
   };
 
   var btn = document.getElementById('publish-btn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Saving…';
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Saving…';
 
   var promise = currentId
     ? db.collection('notifications').doc(currentId).update(data)
-    : db.collection('notifications').add(Object.assign(data, {
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        createdBy: user ? user.email : 'unknown'
-      }));
+    : db.collection('notifications').add(Object.assign(data, { createdAt: firebase.firestore.FieldValue.serverTimestamp(), createdBy: user ? user.email : 'unknown' }));
 
-  promise
-    .then(function() {
-      toast(status === 'published' ? 'Published!' : 'Saved as draft.', 'success');
-      showDashboard();
-    })
-    .catch(function(err) {
-      console.error(err);
-      toast('Error saving: ' + err.message, 'error');
-    })
-    .finally(function() {
-      btn.disabled = false;
-      btn.textContent = 'Publish';
-    });
+  promise.then(function() {
+    toast(status === 'published' ? 'Published!' : 'Saved as draft.', 'success');
+    showDashboard();
+  }).catch(function(err) {
+    toast('Error: ' + err.message, 'error');
+  }).finally(function() {
+    btn.disabled = false; btn.textContent = 'Publish';
+  });
 }
 
 function publishNotif(id) {
@@ -719,34 +650,50 @@ function deleteNotif(id) {
     .catch(function(err) { toast('Error: ' + err.message, 'error'); });
 }
 
-// ═══ Toast ════════════════════════════════════════════════════════════════════
+// ═══ Preview ═════════════════════════════════════════════════════════════════════
+document.getElementById('preview-btn').addEventListener('click', function() {
+  var title   = document.getElementById('f-title').value.trim() || 'Notification title';
+  var body    = quill.root.innerHTML;
+  var catKey  = document.getElementById('f-category').value;
+  var catDef  = catKey && CATEGORIES[catKey];
+  var preview = stripHtml(body).slice(0, 120) || 'Notification preview text…';
+
+  // Toast preview
+  document.getElementById('pv-toast-title').textContent = title;
+  document.getElementById('pv-toast-body').textContent  = preview;
+  var toastCat = document.getElementById('pv-toast-cat');
+  if (catDef) { toastCat.textContent = catDef.label; toastCat.style.cssText = 'display:inline-block;background:' + catDef.color + ';'; }
+  else { toastCat.style.display = 'none'; }
+
+  // Fullscreen preview
+  document.getElementById('pv-fs-title').textContent = title;
+  document.getElementById('pv-fs-body').innerHTML = body || '<p>' + esc(preview) + '</p>';
+  var fsCat = document.getElementById('pv-fs-cat');
+  fsCat.textContent = catDef ? catDef.label : 'What\'s new';
+
+  document.getElementById('preview-overlay').classList.add('open');
+});
+document.getElementById('preview-close-btn').addEventListener('click', function() {
+  document.getElementById('preview-overlay').classList.remove('open');
+});
+document.getElementById('preview-overlay').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('open');
+});
+
+// ═══ Toast ═══════════════════════════════════════════════════════════════════════
 var _toastTimer = null;
 function toast(msg, type) {
   var el = document.getElementById('admin-toast');
-  el.textContent = msg;
-  el.className = type || '';
-  el.style.display = 'block';
+  el.textContent = msg; el.className = type || ''; el.style.display = 'block';
   clearTimeout(_toastTimer);
   _toastTimer = setTimeout(function() { el.style.display = 'none'; }, 3500);
 }
 
-// ═══ Helpers ═════════════════════════════════════════════════════════════════
-function esc(str) {
-  var d = document.createElement('div');
-  d.appendChild(document.createTextNode(String(str)));
-  return d.innerHTML;
-}
-
-function fmtDate(ts) {
-  var d = ts && ts.toDate ? ts.toDate() : new Date(ts || 0);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
-
-function toLocalDatetimeInput(date) {
-  var offset = date.getTimezoneOffset();
-  var local  = new Date(date.getTime() - offset * 60000);
-  return local.toISOString().slice(0, 16);
-}
+// ═══ Helpers ═════════════════════════════════════════════════════════════════════
+function esc(str) { var d = document.createElement('div'); d.appendChild(document.createTextNode(String(str))); return d.innerHTML; }
+function stripHtml(html) { var d = document.createElement('div'); d.innerHTML = html; return d.textContent || d.innerText || ''; }
+function fmtDate(ts) { var d = ts && ts.toDate ? ts.toDate() : new Date(ts || 0); return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' }); }
+function toLocalDt(date) { var off = date.getTimezoneOffset(); return new Date(date.getTime() - off * 60000).toISOString().slice(0,16); }
 </script>
 </body>
 </html>
