@@ -513,7 +513,7 @@ document.getElementById('back-btn').addEventListener('click', showDashboard);
 document.getElementById('cancel-btn').addEventListener('click', showDashboard);
 
 function showDashboard() {
-  document.getElementById('dashboard-view').style.display = '';
+  document.getElementById('dashboard-view').style.display = 'block';
   document.getElementById('editor-view').style.display = 'none';
 }
 
@@ -543,7 +543,7 @@ function openEditor(notif) {
   renderTags('types');
 
   document.getElementById('dashboard-view').style.display = 'none';
-  document.getElementById('editor-view').style.display = '';
+  document.getElementById('editor-view').style.display = 'block';
   document.getElementById('f-title').focus();
 }
 
