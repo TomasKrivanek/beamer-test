@@ -477,43 +477,58 @@
       /* ── Toast ── */
       #nw-toast {
         position: fixed;
-        bottom: 24px;
-        right: 24px;
-        width: 320px;
+        bottom: 28px;
+        right: 28px;
+        width: 380px;
         background: #fff;
-        border-radius: 12px;
-        box-shadow: 0 8px 28px rgba(0,0,0,0.14);
+        border-radius: 14px;
+        box-shadow: 0 12px 36px rgba(0,0,0,0.16);
         z-index: 99999;
-        padding: 14px 16px;
-        border-left: 4px solid #335075;
+        padding: 20px 20px 18px;
+        border-left: 5px solid #335075;
         cursor: pointer;
         display: none;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       }
       #nw-toast.nw-show {
         display: block;
-        animation: nw-slidein 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+        animation: nw-slidein 0.32s cubic-bezier(0.22, 1, 0.36, 1);
       }
       @keyframes nw-slidein {
-        from { transform: translateY(16px); opacity: 0; }
+        from { transform: translateY(20px); opacity: 0; }
         to   { transform: translateY(0);    opacity: 1; }
       }
       #nw-toast-close {
         position: absolute;
-        top: 8px;
-        right: 10px;
-        background: none;
+        top: 12px;
+        right: 14px;
+        background: #f3f4f6;
         border: none;
+        border-radius: 50%;
         cursor: pointer;
-        font-size: 15px;
-        color: #ccc;
+        font-size: 14px;
+        color: #6b7280;
         line-height: 1;
+        width: 26px;
+        height: 26px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         padding: 0;
       }
-      #nw-toast-close:hover { color: #888; }
-      #nw-toast-title { font-size: 13px; font-weight: 600; color: #1a1a2e; margin-bottom: 3px; padding-right: 18px; }
-      #nw-toast-preview { font-size: 12px; color: #777; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-      #nw-toast-cta { margin-top: 8px; font-size: 11px; color: #335075; font-weight: 500; }
+      #nw-toast-close:hover { background: #e5e7eb; color: #374151; }
+      #nw-toast-label {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: #335075;
+        margin-bottom: 8px;
+        padding-right: 32px;
+      }
+      #nw-toast-title { font-size: 15px; font-weight: 700; color: #1a1a2e; margin-bottom: 6px; padding-right: 32px; line-height: 1.3; }
+      #nw-toast-preview { font-size: 13px; color: #6b7280; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+      #nw-toast-cta { margin-top: 14px; font-size: 13px; color: #335075; font-weight: 600; }
     `;
     var el = document.createElement('style');
     el.id = 'nw-styles';
@@ -584,6 +599,7 @@
     toast.id = 'nw-toast';
     toast.innerHTML =
       '<button id="nw-toast-close">&#x2715;</button>' +
+      '<div id="nw-toast-label">What\'s new</div>' +
       '<div id="nw-toast-title"></div>' +
       '<div id="nw-toast-preview"></div>' +
       '<div id="nw-toast-cta">Click to read &rarr;</div>';
@@ -735,7 +751,6 @@
     document.getElementById('nw-toast-title').textContent = n.title || 'New notification';
     document.getElementById('nw-toast-preview').textContent = _strip(n.body || '').slice(0, 100);
     toast.classList.add('nw-show');
-    setTimeout(function () { toast.classList.remove('nw-show'); }, 9000);
   }
 
   function _updateBadge() {
