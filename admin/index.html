@@ -7,6 +7,7 @@
 
   <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
   <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
   <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
@@ -150,6 +151,38 @@
     @keyframes spin { to { transform: rotate(360deg); } }
 
     @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } .editor-card { padding: 20px 16px; } }
+
+    /* ── Top nav tabs ── */
+    .topbar-tabs { display: flex; gap: 2px; }
+    .topbar-tab { background: none; border: none; color: rgba(255,255,255,0.6); font-size: 13px; font-weight: 500; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+    .topbar-tab:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .topbar-tab.active { background: rgba(255,255,255,0.15); color: #fff; font-weight: 600; }
+
+    /* ── Analytics view ── */
+    #analytics-view { display: none; }
+
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .kpi-card { background: #fff; border-radius: 10px; padding: 18px 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); border: 1px solid #e5e8ec; }
+    .kpi-label { font-size: 12px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .kpi-value { font-size: 28px; font-weight: 700; color: #1a1a2e; line-height: 1; margin-bottom: 4px; }
+    .kpi-sub   { font-size: 12px; color: #9ca3af; }
+
+    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .chart-card { background: #fff; border-radius: 10px; padding: 20px 22px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); border: 1px solid #e5e8ec; }
+    .chart-card.full-width { grid-column: 1 / -1; }
+    .chart-card h3 { font-size: 13px; font-weight: 700; color: #1a1a2e; margin-bottom: 16px; }
+    .chart-wrap { position: relative; height: 220px; }
+    .chart-wrap-sm { position: relative; height: 200px; }
+
+    .top-notif-list { display: flex; flex-direction: column; gap: 8px; }
+    .top-notif-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: #f8f9fb; border-radius: 8px; }
+    .top-notif-rank { font-size: 13px; font-weight: 700; color: #9ca3af; width: 20px; flex-shrink: 0; }
+    .top-notif-info { flex: 1; min-width: 0; }
+    .top-notif-title { font-size: 13px; font-weight: 600; color: #1a1a2e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .top-notif-meta  { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+    .top-notif-reads { font-size: 14px; font-weight: 700; color: #335075; flex-shrink: 0; }
+
+    .no-data { padding: 32px; text-align: center; color: #d1d5db; font-size: 13px; }
   </style>
 </head>
 <body>
@@ -175,7 +208,13 @@
 <!-- ═══ APP ══════════════════════════════════════════════════════════════════ -->
 <div id="app">
   <div class="topbar">
-    <h1>📣 Notifications Admin</h1>
+    <div style="display:flex;align-items:center;gap:20px">
+      <h1>📣 Notifications Admin</h1>
+      <div class="topbar-tabs">
+        <button class="topbar-tab active" id="tab-notifications">Notifications</button>
+        <button class="topbar-tab" id="tab-analytics">Analytics</button>
+      </div>
+    </div>
     <div class="topbar-right">
       <span class="topbar-user" id="topbar-email"></span>
       <button class="btn btn-ghost btn-sm" id="logout-btn" style="color:#aaa;border-color:#444;">Sign out</button>
@@ -357,10 +396,70 @@
   </div>
 </div>
 
+<!-- ═══ ANALYTICS VIEW ═══════════════════════════════════════════════════════ -->
+<div id="analytics-view">
+  <div class="container">
+    <div class="view-header" style="margin-bottom:20px">
+      <h2>Analytics</h2>
+    </div>
+
+    <!-- KPI cards -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Published</div>
+        <div class="kpi-value" id="kpi-published">—</div>
+        <div class="kpi-sub">notifications</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Total reads</div>
+        <div class="kpi-value" id="kpi-reads">—</div>
+        <div class="kpi-sub">unique user reads</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Avg reads</div>
+        <div class="kpi-value" id="kpi-avg">—</div>
+        <div class="kpi-sub">per notification</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Top category</div>
+        <div class="kpi-value" style="font-size:18px" id="kpi-top-cat">—</div>
+        <div class="kpi-sub">by reads</div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-grid">
+      <div class="chart-card full-width">
+        <h3>Reads over the last 14 days</h3>
+        <div class="chart-wrap"><canvas id="chart-timeline"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>Reads by category</h3>
+        <div class="chart-wrap-sm"><canvas id="chart-category"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>Display mode breakdown</h3>
+        <div class="chart-wrap-sm"><canvas id="chart-display"></canvas></div>
+      </div>
+      <div class="chart-card full-width">
+        <h3>Top performing notifications</h3>
+        <div id="top-notif-list" class="top-notif-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div id="admin-toast"></div>
 
 <script>
+// ═══ Analytics charts (kept so we can destroy before re-render) ══════════════════
+var _chartTimeline = null;
+var _chartCategory = null;
+var _chartDisplay  = null;
+var _allNotifs     = [];
+var _allReads      = [];
+
 // ═══ Category definitions ══════════════════════════════════════════════════════
 var CATEGORIES = {
   'new-feature':  { label: 'New feature',  color: '#0d6eaa' },
@@ -427,21 +526,21 @@ document.getElementById('logout-btn').addEventListener('click', function() { aut
 // ═══ Load notifications ══════════════════════════════════════════════════════════
 function loadNotifications() {
   db.collection('notifications').orderBy('createdAt','desc').onSnapshot(function(snapshot) {
-    renderTable(snapshot.docs.map(function(d) { return Object.assign({ id: d.id }, d.data()); }));
+    _allNotifs = snapshot.docs.map(function(d) { return Object.assign({ id: d.id }, d.data()); });
+    renderTable(_allNotifs);
+    if (document.getElementById('analytics-view').style.display !== 'none') renderAnalytics();
   });
 }
 
 function loadReadCounts() {
   db.collection('reads').onSnapshot(function(snap) {
+    _allReads = snap.docs.map(function(d) { return d.data(); });
     _readCounts = {};
-    snap.docs.forEach(function(doc) {
-      var nid = doc.data().notifId;
-      if (nid) _readCounts[nid] = (_readCounts[nid] || 0) + 1;
+    _allReads.forEach(function(r) {
+      if (r.notifId) _readCounts[r.notifId] = (_readCounts[r.notifId] || 0) + 1;
     });
-    // Re-render table with updated counts
-    db.collection('notifications').orderBy('createdAt','desc').get().then(function(s) {
-      renderTable(s.docs.map(function(d) { return Object.assign({ id: d.id }, d.data()); }));
-    });
+    if (_allNotifs.length) renderTable(_allNotifs);
+    if (document.getElementById('analytics-view').style.display !== 'none') renderAnalytics();
   }, function(err) {
     console.warn('[Admin] Read counts unavailable — check Firestore rules:', err.message);
   });
@@ -693,6 +792,146 @@ function esc(str) { var d = document.createElement('div'); d.appendChild(documen
 function stripHtml(html) { var d = document.createElement('div'); d.innerHTML = html; return d.textContent || d.innerText || ''; }
 function fmtDate(ts) { var d = ts && ts.toDate ? ts.toDate() : new Date(ts || 0); return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' }); }
 function toLocalDt(date) { var off = date.getTimezoneOffset(); return new Date(date.getTime() - off * 60000).toISOString().slice(0,16); }
+
+// ═══ Tab navigation ═══════════════════════════════════════════════════════════
+document.getElementById('tab-notifications').addEventListener('click', function() {
+  document.getElementById('tab-notifications').classList.add('active');
+  document.getElementById('tab-analytics').classList.remove('active');
+  document.querySelector('.container').style.display = '';
+  document.getElementById('analytics-view').style.display = 'none';
+});
+
+document.getElementById('tab-analytics').addEventListener('click', function() {
+  document.getElementById('tab-analytics').classList.add('active');
+  document.getElementById('tab-notifications').classList.remove('active');
+  document.querySelector('.container').style.display = 'none';
+  document.getElementById('analytics-view').style.display = 'block';
+  renderAnalytics();
+});
+
+// ═══ Analytics ════════════════════════════════════════════════════════════════
+function renderAnalytics() {
+  var published = _allNotifs.filter(function(n) { return n.status === 'published'; });
+  var totalReads = _allReads.length;
+  var avgReads   = published.length ? (totalReads / published.length).toFixed(1) : '0';
+
+  // Top category by reads
+  var catReads = {};
+  _allReads.forEach(function(r) {
+    var n = _allNotifs.find(function(x) { return x.id === r.notifId; });
+    if (n && n.category) catReads[n.category] = (catReads[n.category] || 0) + 1;
+  });
+  var topCatKey = Object.keys(catReads).sort(function(a,b) { return catReads[b] - catReads[a]; })[0];
+  var topCatLabel = topCatKey && CATEGORIES[topCatKey] ? CATEGORIES[topCatKey].label : '—';
+
+  // KPI cards
+  document.getElementById('kpi-published').textContent = published.length;
+  document.getElementById('kpi-reads').textContent     = totalReads;
+  document.getElementById('kpi-avg').textContent       = avgReads;
+  document.getElementById('kpi-top-cat').textContent   = topCatLabel;
+
+  // ── Timeline chart (last 14 days) ──
+  var days = [];
+  var dayCounts = {};
+  for (var i = 13; i >= 0; i--) {
+    var d = new Date(); d.setDate(d.getDate() - i);
+    var key = d.toISOString().slice(0, 10);
+    days.push(key); dayCounts[key] = 0;
+  }
+  _allReads.forEach(function(r) {
+    if (!r.readAt) return;
+    var d = r.readAt.toDate ? r.readAt.toDate() : new Date(r.readAt);
+    var key = d.toISOString().slice(0, 10);
+    if (dayCounts[key] !== undefined) dayCounts[key]++;
+  });
+  var timelineLabels = days.map(function(d) {
+    var dt = new Date(d + 'T12:00:00');
+    return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  });
+
+  if (_chartTimeline) _chartTimeline.destroy();
+  _chartTimeline = new Chart(document.getElementById('chart-timeline'), {
+    type: 'line',
+    data: {
+      labels: timelineLabels,
+      datasets: [{ label: 'Reads', data: days.map(function(d) { return dayCounts[d]; }),
+        borderColor: '#335075', backgroundColor: 'rgba(51,80,117,0.08)',
+        borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#335075', fill: true, tension: 0.3 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#f0f0f0' } },
+                x: { grid: { display: false } } } }
+  });
+
+  // ── Category chart ──
+  var catLabels = [], catData = [], catColors = [];
+  Object.keys(CATEGORIES).forEach(function(key) {
+    if (!catReads[key]) return;
+    catLabels.push(CATEGORIES[key].label);
+    catData.push(catReads[key]);
+    catColors.push(CATEGORIES[key].color);
+  });
+
+  if (_chartCategory) _chartCategory.destroy();
+  if (catData.length === 0) {
+    document.getElementById('chart-category').parentElement.innerHTML = '<div class="no-data">No categorised notifications yet</div>';
+  } else {
+    _chartCategory = new Chart(document.getElementById('chart-category'), {
+      type: 'bar',
+      data: { labels: catLabels, datasets: [{ data: catData, backgroundColor: catColors, borderRadius: 6, borderSkipped: false }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#f0f0f0' } },
+                  x: { grid: { display: false } } } }
+    });
+  }
+
+  // ── Display mode donut ──
+  var modeReads = { badge: 0, toast: 0, fullscreen: 0 };
+  _allReads.forEach(function(r) {
+    var n = _allNotifs.find(function(x) { return x.id === r.notifId; });
+    if (n) { var m = n.displayMode || 'toast'; if (modeReads[m] !== undefined) modeReads[m]++; }
+  });
+  var modeLabels = ['Badge', 'Toast', 'Full screen'];
+  var modeData   = [modeReads.badge, modeReads.toast, modeReads.fullscreen];
+  var modeColors = ['#94a3b8', '#335075', '#8b5cf6'];
+
+  if (_chartDisplay) _chartDisplay.destroy();
+  if (modeData.every(function(v) { return v === 0; })) {
+    document.getElementById('chart-display').parentElement.innerHTML = '<div class="no-data">No reads recorded yet</div>';
+  } else {
+    _chartDisplay = new Chart(document.getElementById('chart-display'), {
+      type: 'doughnut',
+      data: { labels: modeLabels, datasets: [{ data: modeData, backgroundColor: modeColors, borderWidth: 0, hoverOffset: 4 }] },
+      options: { responsive: true, maintainAspectRatio: false, cutout: '65%',
+        plugins: { legend: { position: 'bottom', labels: { padding: 16, font: { size: 12 } } } } }
+    });
+  }
+
+  // ── Top notifications ──
+  var ranked = _allNotifs
+    .filter(function(n) { return n.status === 'published'; })
+    .map(function(n) { return { n: n, reads: _readCounts[n.id] || 0 }; })
+    .sort(function(a, b) { return b.reads - a.reads; })
+    .slice(0, 5);
+
+  var listEl = document.getElementById('top-notif-list');
+  if (ranked.length === 0) {
+    listEl.innerHTML = '<div class="no-data">No published notifications yet</div>';
+  } else {
+    listEl.innerHTML = ranked.map(function(item, i) {
+      var catDef = item.n.category && CATEGORIES[item.n.category];
+      var catHtml = catDef ? '<span style="background:' + catDef.color + ';color:#fff;font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;margin-left:6px">' + catDef.label + '</span>' : '';
+      return '<div class="top-notif-item">' +
+        '<div class="top-notif-rank">#' + (i + 1) + '</div>' +
+        '<div class="top-notif-info">' +
+          '<div class="top-notif-title">' + esc(item.n.title || '(no title)') + catHtml + '</div>' +
+          '<div class="top-notif-meta">' + fmtDate(item.n.scheduledFor) + '</div>' +
+        '</div>' +
+        '<div class="top-notif-reads">' + item.reads + ' reads</div>' +
+      '</div>';
+    }).join('');
+  }
+}
 </script>
 </body>
 </html>
