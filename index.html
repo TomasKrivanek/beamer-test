@@ -666,13 +666,108 @@
   </main>
 </div>
 
+<!-- ═══ Debug panel ═══════════════════════════════════════════════════════════ -->
+<style>
+  #debug-panel {
+    position: fixed; bottom: 20px; left: 20px; z-index: 88888;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  #debug-toggle {
+    background: #1a2433; color: #fff; border: none; border-radius: 8px;
+    padding: 7px 13px; font-size: 12px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  #debug-toggle:hover { background: #2a3a50; }
+  #debug-box {
+    display: none; background: #fff; border-radius: 12px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.18); padding: 16px 18px;
+    width: 280px; margin-bottom: 8px;
+    border: 1px solid #e5e8ec;
+  }
+  #debug-box.open { display: block; }
+  #debug-box h4 { font-size: 12px; font-weight: 700; color: #1a2433; margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .debug-field { margin-bottom: 12px; }
+  .debug-field label { display: block; font-size: 11px; font-weight: 600; color: #718096; margin-bottom: 4px; }
+  .debug-field input, .debug-field select {
+    width: 100%; padding: 7px 10px; border: 1px solid #ddd; border-radius: 6px;
+    font-size: 13px; font-family: inherit; color: #1a2433;
+  }
+  .debug-field input:focus, .debug-field select:focus { outline: none; border-color: #335075; }
+  #debug-apply {
+    width: 100%; padding: 8px; background: #335075; color: #fff; border: none;
+    border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+    margin-top: 4px;
+  }
+  #debug-apply:hover { background: #2a4163; }
+  #debug-status { font-size: 11px; color: #10b981; text-align: center; margin-top: 8px; display: none; }
+</style>
+
+<div id="debug-panel">
+  <div id="debug-box">
+    <h4>🛠 Widget debug</h4>
+    <div class="debug-field">
+      <label>User ID</label>
+      <input type="text" id="dbg-userid" placeholder="e.g. demo-user-1">
+    </div>
+    <div class="debug-field">
+      <label>Role</label>
+      <select id="dbg-role">
+        <option value="">— no role —</option>
+        <option value="admin">admin</option>
+        <option value="installer">installer</option>
+        <option value="user">user</option>
+      </select>
+    </div>
+    <div class="debug-field">
+      <label>Building type</label>
+      <select id="dbg-building">
+        <option value="">— no building type —</option>
+        <option value="hotel">hotel</option>
+        <option value="residential">residential</option>
+        <option value="commercial">commercial</option>
+        <option value="family-home">family-home</option>
+      </select>
+    </div>
+    <button id="debug-apply">Apply &amp; reload widget</button>
+    <div id="debug-status">✓ Applied!</div>
+  </div>
+  <button id="debug-toggle">🛠 Debug</button>
+</div>
+
 <!-- ═══ Widget scripts ════════════════════════════════════════════════════════ -->
 <script src="https://tomaskrivanek.github.io/beamer-test/widget.js"></script>
 <script>
-  NotifWidget.init({
-    userId: 'demo-user-1',
-    role: 'admin',
-    buildingType: 'hotel'
+  // Load saved debug config or use defaults
+  var _dbgCfg = JSON.parse(localStorage.getItem('dbg_widget_cfg') || 'null') || {
+    userId: 'demo-user-1', role: 'admin', buildingType: 'hotel'
+  };
+
+  // Populate debug fields
+  document.getElementById('dbg-userid').value   = _dbgCfg.userId       || '';
+  document.getElementById('dbg-role').value      = _dbgCfg.role         || '';
+  document.getElementById('dbg-building').value  = _dbgCfg.buildingType || '';
+
+  // Init widget with current config
+  NotifWidget.init(_dbgCfg);
+
+  // Toggle panel
+  document.getElementById('debug-toggle').addEventListener('click', function() {
+    document.getElementById('debug-box').classList.toggle('open');
+  });
+
+  // Apply new config
+  document.getElementById('debug-apply').addEventListener('click', function() {
+    var cfg = {
+      userId:       document.getElementById('dbg-userid').value.trim() || 'anonymous',
+      role:         document.getElementById('dbg-role').value || null,
+      buildingType: document.getElementById('dbg-building').value || null
+    };
+    localStorage.setItem('dbg_widget_cfg', JSON.stringify(cfg));
+
+    // Show confirmation then reload
+    var status = document.getElementById('debug-status');
+    status.style.display = 'block';
+    setTimeout(function() { window.location.reload(); }, 800);
   });
 </script>
 
