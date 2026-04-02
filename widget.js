@@ -181,22 +181,22 @@
     var css = `
       /* ── Bell ── */
       #nw-bell {
-        position: relative;
-        background: #335075;
-        border: none;
-        cursor: pointer;
-        padding: 8px 10px;
-        border-radius: 8px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        transition: background 0.2s;
-        margin-left: 12px;
-        vertical-align: middle;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+        position: relative !important;
+        background: #335075 !important;
+        border: none !important;
+        cursor: pointer !important;
+        padding: 8px 10px !important;
+        border-radius: 8px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: background 0.2s !important;
+        margin-left: 12px !important;
+        vertical-align: middle !important;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.18) !important;
       }
-      #nw-bell:hover { background: #2a4163; }
-      #nw-bell svg { width: 20px; height: 20px; fill: #ffffff; display: block; }
+      #nw-bell:hover { background: #2a4163 !important; }
+      #nw-bell svg { width: 20px !important; height: 20px !important; fill: #ffffff !important; display: block !important; }
       #nw-badge {
         position: absolute;
         top: -5px;
