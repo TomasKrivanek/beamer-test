@@ -530,6 +530,10 @@ function loadNotifications() {
     _allNotifs = snapshot.docs.map(function(d) { return Object.assign({ id: d.id }, d.data()); });
     renderTable(_allNotifs);
     if (document.getElementById('analytics-view').style.display !== 'none') renderAnalytics();
+  }, function(err) {
+    console.error('[Admin] loadNotifications failed:', err);
+    var wrap = document.getElementById('notif-table-wrap');
+    wrap.innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg><p style="color:#e74c3c">Failed to load: ' + err.message + '</p></div>';
   });
 }
 
