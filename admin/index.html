@@ -336,6 +336,32 @@
           </div>
         </div>
 
+        <div class="form-group">
+          <label for="f-display-mode">How to display to users</label>
+          <select id="f-display-mode">
+            <option value="badge">Badge only — silent, just updates the bell counter</option>
+            <option value="toast" selected>Toast — slide-in notification in the corner of the screen</option>
+            <option value="fullscreen">Full screen — large overlay that covers the page</option>
+          </select>
+          <div class="hint">Controls what happens when the notification first appears for a user.</div>
+        </div>
+
+        <!-- CTA Button -->
+        <div class="targeting-section">
+          <h4>Call-to-action button <span style="font-weight:400;color:#aaa">(optional)</span></h4>
+          <div class="desc">Add a button at the bottom of the notification that links somewhere.</div>
+          <div class="form-row">
+            <div class="form-group" style="margin-bottom:0">
+              <label for="f-cta-text">Button label</label>
+              <input type="text" id="f-cta-text" placeholder="e.g. Learn more, Try it now">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label for="f-cta-url">Button URL</label>
+              <input type="url" id="f-cta-url" placeholder="https://...">
+            </div>
+          </div>
+        </div>
+
         <!-- Targeting -->
         <div class="targeting-section">
           <h4>Audience targeting <span style="font-weight:400;color:#aaa">(optional)</span></h4>
@@ -476,11 +502,14 @@ function renderTable(items) {
     var targeting = [];
     if (n.targetRoles && n.targetRoles.length) targeting.push(n.targetRoles.join(', '));
     if (n.targetBuildingTypes && n.targetBuildingTypes.length) targeting.push(n.targetBuildingTypes.join(', '));
+    var modeLabel = { badge: '🔔 Badge', toast: '💬 Toast', fullscreen: '🖥 Full screen' };
+    var displayLabel = modeLabel[n.displayMode] || '💬 Toast';
 
     return '<tr>' +
       '<td><strong>' + esc(n.title || '(no title)') + '</strong></td>' +
       '<td><span class="status-badge ' + statusCls + '">' + (n.status || 'draft') + '</span></td>' +
       '<td>' + scheduled + '</td>' +
+      '<td style="font-size:12px;color:#555">' + displayLabel + '</td>' +
       '<td style="color:#aaa;font-size:12px">' + (targeting.join(' · ') || 'Everyone') + '</td>' +
       '<td>' +
         '<div class="tbl-actions">' +
@@ -500,6 +529,7 @@ function renderTable(items) {
         '<th>Title</th>' +
         '<th>Status</th>' +
         '<th>Scheduled for</th>' +
+        '<th>Display</th>' +
         '<th>Audience</th>' +
         '<th>Actions</th>' +
       '</tr></thead>' +
@@ -525,6 +555,9 @@ function openEditor(notif) {
   document.getElementById('f-title').value = notif ? (notif.title || '') : '';
   quill.root.innerHTML = notif ? (notif.body || '') : '';
   document.getElementById('f-status').value = notif ? (notif.status || 'draft') : 'draft';
+  document.getElementById('f-display-mode').value = notif ? (notif.displayMode || 'toast') : 'toast';
+  document.getElementById('f-cta-text').value = notif ? (notif.ctaText || '') : '';
+  document.getElementById('f-cta-url').value = notif ? (notif.ctaUrl || '') : '';
 
   // Schedule
   if (notif && notif.scheduledFor) {
@@ -629,11 +662,17 @@ function saveNotif(overrideStatus) {
   var scheduledFor = firebase.firestore.Timestamp.fromDate(new Date(schedRaw));
   var user = auth.currentUser;
 
+  var ctaText = document.getElementById('f-cta-text').value.trim();
+  var ctaUrl  = document.getElementById('f-cta-url').value.trim();
+
   var data = {
     title: title,
     body: body,
     status: status,
     scheduledFor: scheduledFor,
+    displayMode: document.getElementById('f-display-mode').value,
+    ctaText: ctaText,
+    ctaUrl: ctaUrl,
     targetRoles: rolesTags,
     targetBuildingTypes: typesTags,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
