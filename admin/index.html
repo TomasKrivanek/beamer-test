@@ -432,20 +432,19 @@ function loadNotifications() {
 }
 
 function loadReadCounts() {
-  db.collection('reads').get().then(function(snap) {
+  db.collection('reads').onSnapshot(function(snap) {
     _readCounts = {};
     snap.docs.forEach(function(doc) {
       var nid = doc.data().notifId;
       if (nid) _readCounts[nid] = (_readCounts[nid] || 0) + 1;
     });
-    // Trigger re-render if table already loaded
-    var wrap = document.getElementById('notif-table-wrap');
-    if (wrap.querySelector('table')) {
-      db.collection('notifications').orderBy('createdAt','desc').get().then(function(s) {
-        renderTable(s.docs.map(function(d) { return Object.assign({ id: d.id }, d.data()); }));
-      });
-    }
-  }).catch(function() {});
+    // Re-render table with updated counts
+    db.collection('notifications').orderBy('createdAt','desc').get().then(function(s) {
+      renderTable(s.docs.map(function(d) { return Object.assign({ id: d.id }, d.data()); }));
+    });
+  }, function(err) {
+    console.warn('[Admin] Read counts unavailable — check Firestore rules:', err.message);
+  });
 }
 
 function renderTable(items) {

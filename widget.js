@@ -150,7 +150,7 @@
         notifId: id,
         userId: _config.userId,
         readAt: firebase.firestore.FieldValue.serverTimestamp()
-      }).catch(function () {});
+      }).catch(function (err) { console.error('[NotifWidget] Read receipt failed:', err.message); });
     }
     _updateBadge();
     _renderNotifications();
@@ -239,12 +239,14 @@
         display: none; align-items: center; justify-content: center;
         padding: 0 3px; border: 2px solid #fff; box-sizing: content-box;
       }
-      @keyframes nw-pulse-ring {
-        0%   { box-shadow: 0 2px 6px rgba(0,0,0,0.18), 0 0 0 0 rgba(51,80,117,0.55) !important; }
-        70%  { box-shadow: 0 2px 6px rgba(0,0,0,0.18), 0 0 0 10px rgba(51,80,117,0) !important; }
-        100% { box-shadow: 0 2px 6px rgba(0,0,0,0.18), 0 0 0 0 rgba(51,80,117,0) !important; }
+      @keyframes nw-bell-pulse {
+        0%   { transform: scale(1); }
+        20%  { transform: scale(1.22); }
+        40%  { transform: scale(1); }
+        65%  { transform: scale(1.14); }
+        100% { transform: scale(1); }
       }
-      #nw-bell.nw-pulse { animation: nw-pulse-ring 0.9s ease 3 !important; }
+      #nw-bell.nw-pulse { animation: nw-bell-pulse 0.6s ease 3 !important; }
 
       /* ── Panel ── */
       #nw-panel {
