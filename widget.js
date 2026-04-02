@@ -1,5 +1,5 @@
 /**
- * Notification Widget
+ * NotifWidget — In-app notification widget
  * Embed on any page with:
  *
  *   <script src="https://tomaskrivanek.github.io/beamer-test/widget.js"></script>
@@ -10,9 +10,25 @@
  *       buildingType: 'hotel'
  *     });
  *   </script>
+ *
+ * Security notes:
+ *   - The Firebase API key is intentionally public. It identifies the project but
+ *     does not grant write access — all write operations are restricted by
+ *     Firestore Security Rules (authenticated admin only for writes; reads are
+ *     scoped to published notifications).
+ *   - Notification bodies are sanitised with DOMPurify before being inserted into
+ *     the DOM, preventing XSS from malicious content stored in Firestore.
+ *   - CTA URLs are validated to http/https only to block javascript: injection.
  */
 (function (window, document) {
   'use strict';
+
+  // ─── Constants ───────────────────────────────────────────────────────────────
+  var DOMPURIFY_CDN        = 'https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js';
+  var MAX_NOTIFICATIONS    = 30;
+  var NEW_BADGE_WINDOW_MS  = 48 * 3600000;
+  var FIRST_POPUP_DELAY_MS = 1200;
+  var REFILTER_INTERVAL_MS = 60000;
 
   // ─── Firebase Config ────────────────────────────────────────────────────────
   var FIREBASE_CONFIG = {
@@ -50,9 +66,11 @@
     _loadReadState();
     _injectStyles();
     _loadFirebase(function () {
-      _renderWidget();
-      _subscribeToNotifications();
-      setInterval(_applyFilters, 60000);
+      _loadScript(DOMPURIFY_CDN, function () {
+        _renderWidget();
+        _subscribeToNotifications();
+        setInterval(_applyFilters, REFILTER_INTERVAL_MS);
+      });
     });
   }
 
@@ -109,8 +127,8 @@
       return tb - ta;
     });
 
-    // Limit to 30 most recent
-    _notifications = filtered.slice(0, 30);
+    // Limit to most recent
+    _notifications = filtered.slice(0, MAX_NOTIFICATIONS);
 
     _renderCategoryFilter();
     _renderNotifications();
@@ -165,7 +183,7 @@
           notifId: n.id,
           userId: _config.userId,
           readAt: firebase.firestore.FieldValue.serverTimestamp()
-        }).catch(function () {});
+        }).catch(function (err) { console.error('[NotifWidget] Read receipt failed:', err.message); });
       });
     }
     _updateBadge();
@@ -182,7 +200,7 @@
 
     if (_knownIds === null) {
       var firstUnread = _notifications.find(function (n) { return !_readIds.has(n.id); });
-      if (firstUnread) setTimeout(function () { _triggerDisplay(firstUnread); }, 1200);
+      if (firstUnread) setTimeout(function () { _triggerDisplay(firstUnread); }, FIRST_POPUP_DELAY_MS);
     } else {
       _notifications.forEach(function (n) {
         if (!_knownIds.has(n.id) && !_readIds.has(n.id)) {
@@ -608,7 +626,7 @@
       var unread   = !_readIds.has(n.id);
       var preview  = _strip(n.body || '').slice(0, 90);
       var catDef   = n.category && CATEGORIES[n.category];
-      var isNew    = unread && n.scheduledFor && (now - _toDate(n.scheduledFor)) < 48 * 3600000;
+      var isNew    = unread && n.scheduledFor && (now - _toDate(n.scheduledFor)) < NEW_BADGE_WINDOW_MS;
 
       var catHtml = catDef
         ? '<div class="nw-cat-label" style="background:' + catDef.color + '">' + catDef.label + '</div>'
@@ -651,7 +669,7 @@
     }
 
     document.getElementById('nw-modal-title').textContent = n.title || '';
-    document.getElementById('nw-modal-body').innerHTML = n.body || '';
+    document.getElementById('nw-modal-body').innerHTML = _sanitize(n.body || '');
     document.getElementById('nw-modal-time').textContent = _absTime(n.scheduledFor);
 
     var footer = document.getElementById('nw-modal-footer');
@@ -659,7 +677,7 @@
     if (existing) existing.remove();
     if (n.ctaText && n.ctaUrl) {
       var btn = document.createElement('a');
-      btn.className = 'nw-cta-btn'; btn.href = n.ctaUrl;
+      btn.className = 'nw-cta-btn'; btn.href = _safeUrl(n.ctaUrl);
       btn.target = '_blank'; btn.rel = 'noopener noreferrer';
       btn.textContent = n.ctaText;
       footer.appendChild(btn);
@@ -677,7 +695,7 @@
     catEl.textContent = catDef ? catDef.label : 'What\'s new';
 
     document.getElementById('nw-fullscreen-title').textContent = n.title || '';
-    document.getElementById('nw-fullscreen-body').innerHTML = n.body || '';
+    document.getElementById('nw-fullscreen-body').innerHTML = _sanitize(n.body || '');
     document.getElementById('nw-fullscreen-time').textContent = _absTime(n.scheduledFor);
 
     var footer = document.getElementById('nw-fullscreen-footer');
@@ -685,7 +703,7 @@
     if (existing) existing.remove();
     if (n.ctaText && n.ctaUrl) {
       var btn = document.createElement('a');
-      btn.className = 'nw-cta-btn'; btn.href = n.ctaUrl;
+      btn.className = 'nw-cta-btn'; btn.href = _safeUrl(n.ctaUrl);
       btn.target = '_blank'; btn.rel = 'noopener noreferrer';
       btn.textContent = n.ctaText;
       footer.appendChild(btn);
@@ -720,6 +738,38 @@
     var c = _unreadCount();
     badge.textContent = c > 9 ? '9+' : String(c);
     badge.style.display = c > 0 ? 'flex' : 'none';
+  }
+
+  // ─── Security Helpers ─────────────────────────────────────────────────────────
+
+  /**
+   * Sanitise HTML using DOMPurify with a strict allowlist.
+   * Falls back to plain-text rendering if DOMPurify hasn't loaded yet.
+   */
+  function _sanitize(html) {
+    if (!html) return '';
+    if (window.DOMPurify) {
+      return DOMPurify.sanitize(html, {
+        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'b', 'i', 'u', 'ul', 'ol', 'li',
+                       'a', 'h1', 'h2', 'h3', 'img', 'blockquote', 'pre', 'code'],
+        ALLOWED_ATTR: ['href', 'src', 'alt', 'target', 'rel']
+      });
+    }
+    // DOMPurify not available — strip all tags as safe fallback
+    return _esc(_strip(html));
+  }
+
+  /**
+   * Validate a URL is http/https only.
+   * Returns '#' for anything else (e.g. javascript:, data:, relative paths).
+   */
+  function _safeUrl(url) {
+    if (!url || typeof url !== 'string') return '#';
+    try {
+      var parsed = new URL(url);
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') return url;
+    } catch (e) { /* invalid URL */ }
+    return '#';
   }
 
   // ─── Helpers ──────────────────────────────────────────────────────────────────
