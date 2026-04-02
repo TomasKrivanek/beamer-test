@@ -1,225 +1,680 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Company Dashboard</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f6f9;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard – My2N</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        /* Sidebar styling */
-        .sidebar {
-            width: 220px;
-            background-color: #335075;
-            height: 100vh;
-            position: fixed;
-            top: 0;
-            left: 0;
-            padding: 20px;
-            color: #fff;
-            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-        }
-        .sidebar h3 {
-            color: #fff;
-            margin: 0;
-            margin-bottom: 20px;
-        }
-        .sidebar a {
-            display: block;
-            color: #cfd8e3;
-            padding: 10px 15px;
-            text-decoration: none;
-            margin-bottom: 10px;
-            border-radius: 5px;
-        }
-        .sidebar a:hover {
-            background-color: #4a678a;
-        }
-        .sidebar .footer {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-        }
-        .sidebar .footer a {
-            color: #cfd8e3;
-            font-size: 12px;
-            margin-bottom: 5px;
-        }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f4f5f7;
+      color: #1a2433;
+      font-size: 14px;
+    }
 
-        /* Main dashboard area */
-        .main-content {
-            margin-left: 240px;
-            padding: 20px;
-        }
-        .dashboard-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 0;
-        }
-        .dashboard-header h1 {
-            font-size: 24px;
-            color: #2b3a50;
-            margin: 0;
-        }
-        .dashboard-header .user-info {
-            font-size: 14px;
-            color: #2b3a50;
-        }
+    /* ── Top bar ─────────────────────────────────────────────────────────── */
+    .topbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 52px;
+      background: #1a2433;
+      display: flex;
+      align-items: center;
+      z-index: 1000;
+      padding: 0;
+    }
 
-        /* Dashboard cards */
-        .dashboard {
-            display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-        .dashboard .card {
-            background-color: #fff;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            width: 48%;
-            margin-bottom: 20px;
-            border: 1px solid #d9e2ec;
-        }
-        .card h2 {
-            font-size: 18px;
-            color: #2b3a50;
-            margin: 0;
-            margin-bottom: 10px;
-        }
-        .card p {
-            font-size: 14px;
-            color: #6c7a89;
-            margin: 0;
-        }
-        .button {
-            display: inline-block;
-            padding: 8px 12px;
-            font-size: 14px;
-            color: #fff;
-            background-color: #007bff;
-            border: none;
-            border-radius: 3px;
-            cursor: pointer;
-            text-decoration: none;
-        }
-        .button:hover {
-            background-color: #0056b3;
-        }
+    .topbar-left {
+      display: flex;
+      align-items: stretch;
+      height: 100%;
+    }
 
-        /* Table */
-        .sites-table {
-            width: 100%;
-            margin-top: 20px;
-            border-collapse: collapse;
-        }
-        .sites-table th, .sites-table td {
-            padding: 10px;
-            border: 1px solid #d9e2ec;
-            text-align: left;
-            color: #2b3a50;
-        }
-        .sites-table th {
-            background-color: #f4f6f9;
-            font-weight: bold;
-        }
-        .status-active {
-            color: #28a745;
-            font-weight: bold;
-        }
-        .status-trial {
-            color: #ff9800;
-            font-weight: bold;
-        }
-    </style>
+    .topbar-context {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 16px;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border-right: 1px solid rgba(255,255,255,0.1);
+      white-space: nowrap;
+    }
+    .topbar-context:hover { background: rgba(255,255,255,0.07); }
+    .topbar-context .label { color: rgba(255,255,255,0.55); font-weight: 400; margin-right: 2px; }
+    .topbar-context .chevron { color: rgba(255,255,255,0.55); font-size: 10px; margin-left: 2px; }
+
+    .topbar-site {
+      background: #1a6fa8;
+      border-right: none;
+    }
+    .topbar-site:hover { background: #186092; }
+
+    .topbar-center {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: #fff;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding-right: 8px;
+      margin-left: auto;
+    }
+
+    .topbar-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 12px;
+      height: 52px;
+      color: rgba(255,255,255,0.85);
+      font-size: 13px;
+      cursor: pointer;
+      border: none;
+      background: none;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+    .topbar-btn:hover { background: rgba(255,255,255,0.07); }
+    .topbar-btn .chevron { color: rgba(255,255,255,0.5); font-size: 10px; }
+
+    .topbar-avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: #1a6fa8;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* ── Sidebar ─────────────────────────────────────────────────────────── */
+    .sidebar {
+      position: fixed;
+      top: 52px;
+      left: 0;
+      bottom: 0;
+      width: 192px;
+      background: #fff;
+      border-right: 1px solid #e5e8ec;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      z-index: 900;
+    }
+
+    .sidebar-nav { flex: 1; padding: 8px 0; }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 16px;
+      color: #4a5568;
+      text-decoration: none;
+      font-size: 13.5px;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      transition: background 0.12s;
+    }
+    .nav-item:hover { background: #f7f9fb; color: #1a2433; }
+    .nav-item.active {
+      background: #e8f4fc;
+      color: #0d6eaa;
+      border-left-color: #0d6eaa;
+      font-weight: 600;
+    }
+    .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; opacity: 0.7; }
+    .nav-item.active svg { opacity: 1; }
+
+    .sidebar-footer {
+      padding: 12px 0;
+      border-top: 1px solid #e5e8ec;
+    }
+    .sidebar-footer .nav-item { font-size: 12.5px; color: #718096; }
+
+    /* ── Main content ────────────────────────────────────────────────────── */
+    .main {
+      margin-left: 192px;
+      margin-top: 52px;
+      padding: 24px;
+      min-height: calc(100vh - 52px);
+    }
+
+    /* ── Cards ───────────────────────────────────────────────────────────── */
+    .card {
+      background: #fff;
+      border-radius: 6px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      border: 1px solid #e5e8ec;
+      overflow: hidden;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px 10px;
+      border-bottom: 1px solid #f0f2f5;
+    }
+    .card-header h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1a2433;
+    }
+    .card-header .card-id {
+      font-size: 12px;
+      color: #718096;
+    }
+    .card-action {
+      font-size: 12px;
+      font-weight: 600;
+      color: #0d6eaa;
+      text-decoration: none;
+      letter-spacing: 0.3px;
+    }
+    .card-action:hover { text-decoration: underline; }
+
+    .card-body { padding: 16px 18px; }
+
+    /* ── Grid layouts ────────────────────────────────────────────────────── */
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .grid-1-2 {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    /* ── Devices card ────────────────────────────────────────────────────── */
+    .devices-body {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0 20px;
+      padding: 16px 18px;
+    }
+    .devices-count .big-number {
+      font-size: 52px;
+      font-weight: 300;
+      color: #1a2433;
+      line-height: 1;
+    }
+    .devices-count .sub { font-size: 12px; color: #718096; margin-top: 4px; }
+    .devices-count .add-btn {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 6px 14px;
+      border: 1px solid #1a6fa8;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #0d6eaa;
+      text-decoration: none;
+      letter-spacing: 0.5px;
+    }
+    .devices-count .add-btn:hover { background: #e8f4fc; }
+
+    .device-list { padding-top: 4px; }
+    .device-list-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 13px;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+    .device-list-item .dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .dot-green { background: #22c55e; }
+    .dot-grey  { background: #d1d5db; }
+
+    .icon-ok      { color: #22c55e; font-size: 14px; }
+    .icon-error   { color: #ef4444; font-size: 14px; }
+    .icon-warn    { color: #f59e0b; font-size: 14px; }
+    .icon-off     { color: #d1d5db; font-size: 14px; }
+
+    /* ── Apartments card ─────────────────────────────────────────────────── */
+    .apt-body {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0 20px;
+      padding: 16px 18px;
+    }
+
+    /* ── 2N Mobile Video card ────────────────────────────────────────────── */
+    .mv-card-inner {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 16px;
+      background: #f7f9fb;
+      border-radius: 6px;
+      border: 1px solid #e5e8ec;
+      margin-bottom: 12px;
+    }
+    .mv-play-icon {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, #0d6eaa, #1a8fcb);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .mv-play-icon svg { width: 20px; height: 20px; fill: #fff; }
+    .mv-info h4 { font-size: 14px; font-weight: 600; color: #1a2433; }
+    .mv-info p  { font-size: 12px; color: #718096; margin-top: 2px; }
+
+    .mv-warning {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border: 1px solid #fca5a5;
+      border-radius: 20px;
+      font-size: 12px;
+      color: #dc2626;
+      margin-bottom: 14px;
+    }
+
+    .btn-outline {
+      display: inline-block;
+      padding: 7px 16px;
+      border: 1px solid #9ca3af;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #374151;
+      letter-spacing: 0.4px;
+      text-decoration: none;
+      cursor: pointer;
+      background: none;
+      font-family: inherit;
+    }
+    .btn-outline:hover { background: #f9fafb; }
+
+    .btn-primary-filled {
+      display: inline-block;
+      padding: 9px 22px;
+      background: #0d6eaa;
+      border: none;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: 0.4px;
+      text-decoration: none;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .btn-primary-filled:hover { background: #0b5d91; }
+
+    /* ── Credit pool card ────────────────────────────────────────────────── */
+    .credit-amount {
+      font-size: 48px;
+      font-weight: 300;
+      color: #dc2626;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .credit-label { font-size: 12px; color: #718096; }
+    .credit-exp   { font-size: 12px; color: #718096; margin-top: 6px; }
+
+    /* ── Credit usage card ───────────────────────────────────────────────── */
+    .credit-usage-body {
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .credit-usage-body p {
+      font-size: 13.5px;
+      color: #4a5568;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+    .credit-usage-footer {
+      margin-top: 20px;
+      font-size: 13px;
+      color: #718096;
+      line-height: 1.5;
+    }
+    .credit-usage-footer a { color: #0d6eaa; text-decoration: none; }
+    .credit-usage-footer a:hover { text-decoration: underline; }
+
+    /* ── Link-list cards (Call settings / Subscriptions / Site users) ────── */
+    .link-list {
+      padding: 8px 0;
+    }
+    .link-list a {
+      display: block;
+      padding: 8px 18px;
+      font-size: 13.5px;
+      color: #0d6eaa;
+      text-decoration: none;
+    }
+    .link-list a:hover { background: #f7f9fb; text-decoration: underline; }
+
+    /* ── SVG icons for sidebar ───────────────────────────────────────────── */
+    .ico { display: flex; }
+  </style>
 </head>
 <body>
 
-    <div class="sidebar">
-        <h3>Company: Wiseman Inc.</h3>
-        <a href="#">Company dashboard</a>
-        <a href="#">Sites</a>
-        <a href="#">Company admins</a>
-        <a href="#">Billing info</a>
-        <a href="#">Payments</a>
-        <a href="#">SDK Settings</a>
-        <div class="footer">
-            <a href="#">About My2N</a>
-            <a href="#">Tech support</a>
-            <a href="#">Legal documents, privacy</a>
+<!-- ═══ TOP BAR ══════════════════════════════════════════════════════════════ -->
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-context">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="rgba(255,255,255,0.7)">
+        <path d="M3 3h7v7H3zm0 11h7v7H3zm11-11h7v7h-7zm0 11h7v7h-7z"/>
+      </svg>
+      <span><span class="label">Company:</span> Wiseman Inc.</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="topbar-context topbar-site">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(255,255,255,0.85)">
+        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
+      </svg>
+      <span><span class="label">Site:</span> Pod Vinicí 20</span>
+      <span class="chevron">▼</span>
+    </div>
+  </div>
+
+  <div class="topbar-center">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
+    </svg>
+    <span style="color:#fff;font-size:19px;font-weight:700;letter-spacing:0.5px;">My2N</span>
+  </div>
+
+  <!-- topbar-right also acts as the widget bell anchor -->
+  <div class="topbar-right header">
+    <button class="topbar-btn">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="rgba(255,255,255,0.75)">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+      </svg>
+      English
+      <span class="chevron">▼</span>
+    </button>
+    <button class="topbar-btn">
+      <div class="topbar-avatar">TK</div>
+      Tomáš Křivánek
+      <span class="chevron">▼</span>
+    </button>
+  </div>
+</header>
+
+<!-- ═══ LAYOUT ════════════════════════════════════════════════════════════════ -->
+<div style="display:flex;">
+
+  <!-- ── Sidebar ── -->
+  <nav class="sidebar">
+    <div class="sidebar-nav">
+      <a href="#" class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+        Dashboard
+      </a>
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
+        Devices
+      </a>
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+        Site users
+      </a>
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+        Apartments
+      </a>
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
+        Call settings
+      </a>
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+        Access settings
+      </a>
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+        Access log
+      </a>
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
+        Subscriptions, licenses
+      </a>
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+        Site payments
+      </a>
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+        Integrations
+      </a>
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+        Site settings
+      </a>
+    </div>
+    <div class="sidebar-footer">
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>
+        About My2N
+      </a>
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/></svg>
+        Tech support
+      </a>
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+        Legal documents, privacy
+      </a>
+    </div>
+  </nav>
+
+  <!-- ── Main content ── -->
+  <main class="main">
+
+    <!-- Row 1: Devices / Apartments / 2N Mobile Video -->
+    <div class="grid-3">
+
+      <!-- Devices -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Devices</h3>
+          <a href="#" class="card-action">SEE ALL DEVICES</a>
         </div>
+        <div class="devices-body">
+          <div class="devices-count">
+            <div class="big-number">6</div>
+            <div class="sub">added devices</div>
+            <a href="#" class="add-btn">ADD DEVICE</a>
+          </div>
+          <div class="device-list">
+            <div class="device-list-item">
+              <span class="icon-error">⊘</span>
+              Intercoms (3)
+              <span class="dot dot-green" style="margin-left:2px"></span>
+            </div>
+            <div class="device-list-item">
+              <span class="icon-ok">✓</span>
+              Answering units (1)
+              <span class="icon-warn" style="margin-left:2px;font-size:12px">▲</span>
+            </div>
+            <div class="device-list-item">
+              <span class="icon-ok">✓</span>
+              Smartphones, tablets (1)
+            </div>
+            <div class="device-list-item">
+              <span class="icon-off">⊗</span>
+              Access units (0)
+            </div>
+            <div class="device-list-item">
+              <span class="icon-warn">▲</span>
+              3rd party devices (1)
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Apartments -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Apartments</h3>
+          <a href="#" class="card-action">SEE ALL APARTMENTS</a>
+        </div>
+        <div class="apt-body">
+          <div class="devices-count">
+            <div class="big-number">3</div>
+            <div class="sub">apartments</div>
+          </div>
+          <div class="device-list">
+            <div class="device-list-item">
+              <span class="icon-ok">✓</span>
+              2 with subscriptions
+            </div>
+            <div class="device-list-item">
+              <span class="icon-off">⊗</span>
+              0 active for free
+              <span class="dot dot-green" style="margin-left:4px"></span>
+            </div>
+            <div class="device-list-item">
+              <span class="icon-off">⊗</span>
+              0 no service
+            </div>
+            <div class="device-list-item">
+              <span class="icon-error">⊘</span>
+              1 unlicensed
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2N Mobile Video -->
+      <div class="card">
+        <div class="card-header">
+          <h3>2N Mobile Video</h3>
+          <span class="card-id">My2N ID 016178201244</span>
+        </div>
+        <div class="card-body">
+          <div class="mv-card-inner">
+            <div class="mv-play-icon">
+              <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+            <div class="mv-info">
+              <h4>Free trial</h4>
+              <p>until 7 Aug, 2028 13:29</p>
+            </div>
+          </div>
+          <div class="mv-warning">
+            <span style="color:#ef4444">●</span>
+            Service isn't working on 2 devices
+          </div>
+          <br>
+          <button class="btn-outline">PURCHASE SUBSCRIPTION</button>
+        </div>
+      </div>
     </div>
 
-    <div class="main-content">
-        <div class="dashboard-header">
-            <h1>Company dashboard</h1>
-            <div class="user-info">Tomáš Křivánek</div>
+    <!-- Row 2: Credit pool / Credit usage -->
+    <div class="grid-1-2">
+
+      <!-- Credit pool -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Credit pool</h3>
+          <a href="#" class="card-action">USE VOUCHER</a>
         </div>
-        
-        <div class="dashboard">
-            <div class="card">
-                <h2>7 Sites</h2>
-                <a href="#" class="button">+ New Site</a>
-                <p>What is a site?</p>
-            </div>
-            <div class="card">
-                <h2>Sites Overview</h2>
-                <table class="sites-table">
-                    <tr>
-                        <th>Site name</th>
-                        <th>Site type</th>
-                        <th>Mobile Video status</th>
-                    </tr>
-                    <tr>
-                        <td>2N Tower</td>
-                        <td>Apartment building</td>
-                        <td><span class="status-active">Active</span></td>
-                    </tr>
-                    <tr>
-                        <td>CIP summit</td>
-                        <td>Apartment building</td>
-                        <td><span class="status-active">Active</span></td>
-                    </tr>
-                    <tr>
-                        <td>My Villa</td>
-                        <td>Family home</td>
-                        <td><span class="status-active">Active</span></td>
-                    </tr>
-                    <tr>
-                        <td>Petr Malík</td>
-                        <td>Apartment building</td>
-                        <td><span class="status-active">Active</span></td>
-                    </tr>
-                    <tr>
-                        <td>Pod Vinicí 20</td>
-                        <td>Other</td>
-                        <td><span class="status-trial">Free trial</span></td>
-                    </tr>
-                </table>
-            </div>
+        <div class="card-body">
+          <div class="credit-amount">0.0</div>
+          <div class="credit-label">credits (per apartment payment model)</div>
+          <div class="credit-exp">Expiration: 7 Aug, 2028</div>
         </div>
+      </div>
+
+      <!-- Credit usage and payments -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Credit usage and payments</h3>
+          <a href="#" class="card-action">SEE PRICING</a>
+        </div>
+        <div class="credit-usage-body">
+          <p>
+            You can start using Mobile Video after you purchase a subscription.<br>
+            Before purchase of Mobile Video services, please check your billing details.
+          </p>
+          <button class="btn-primary-filled">CHECK YOUR BILLING INFO</button>
+          <div class="credit-usage-footer">
+            <br>
+            Here you can access a complete overview of your <a href="#">company's payments</a>,<br>
+            including licence purchases and credit usage.
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Beamer script -->
-    <script>
-        var beamer_config = {
-          product_id : "sqABPhBk71587" // DO NOT CHANGE: This is your product code on Beamer
-        };
-    </script>
-    <script type="text/javascript" src="https://app.getbeamer.com/js/beamer-embed.js" defer="defer"></script>
-      <script src="https://tomaskrivanek.github.io/beamer-test/widget.js"></script>                                                                                                               
-  <script>                                                                                                                                                                                    
-    NotifWidget.init({                                      
-      userId: 'demo-user-1',                                                                                                                                                                  
-      role: 'admin',
-      buildingType: 'hotel'                                                                                                                                                                   
-    });                                                     
-  </script>           
+    <!-- Row 3: Call settings / Subscriptions / Site users -->
+    <div class="grid-3">
+
+      <!-- Call settings -->
+      <div class="card">
+        <div class="card-header"><h3>Call settings</h3></div>
+        <div class="link-list">
+          <a href="#">Phonebooks</a>
+          <a href="#">Intercoms</a>
+          <a href="#">Answering units</a>
+        </div>
+      </div>
+
+      <!-- Subscriptions -->
+      <div class="card">
+        <div class="card-header"><h3>Subscriptions</h3></div>
+        <div class="link-list">
+          <a href="#">Purchase subscription</a>
+          <a href="#">Use voucher</a>
+        </div>
+      </div>
+
+      <!-- Site users -->
+      <div class="card">
+        <div class="card-header"><h3>Site users</h3></div>
+        <div class="link-list">
+          <a href="#">See all users</a>
+          <a href="#">Add user</a>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- ═══ Widget scripts ════════════════════════════════════════════════════════ -->
+<script src="https://tomaskrivanek.github.io/beamer-test/widget.js"></script>
+<script>
+  NotifWidget.init({
+    userId: 'demo-user-1',
+    role: 'admin',
+    buildingType: 'hotel'
+  });
+</script>
+
 </body>
 </html>
