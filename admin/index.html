@@ -205,6 +205,41 @@
     .top-notif-reads { font-size: 14px; font-weight: 700; color: #335075; flex-shrink: 0; }
 
     .no-data { padding: 32px; text-align: center; color: #d1d5db; font-size: 13px; }
+
+    /* ── Kebab menu ── */
+    .kebab-btn { background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 6px; font-size: 20px; color: #c0c7d0; line-height: 1; font-family: inherit; }
+    .kebab-btn:hover { background: #f3f4f6; color: #374151; }
+    #kebab-menu { position: fixed; background: #fff; border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,0.13); border: 1px solid #e5e8ec; min-width: 168px; z-index: 9000; padding: 4px; display: none; }
+    #kebab-menu.open { display: block; }
+    .km-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; font-size: 13px; cursor: pointer; border-radius: 6px; color: #374151; border: none; background: none; width: 100%; text-align: left; font-family: inherit; white-space: nowrap; }
+    .km-item:hover { background: #f8f9fb; }
+    .km-item.km-success { color: #059669; }
+    .km-item.km-success:hover { background: #ecfdf5; }
+    .km-item.km-danger  { color: #e74c3c; }
+    .km-item.km-danger:hover  { background: #fef2f2; }
+    .km-sep { height: 1px; background: #f0f0f0; margin: 4px 0; }
+
+    /* ── Search / filter bar ── */
+    .search-input  { width: 200px; padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; font-family: inherit; color: #1a1a2e; }
+    .search-input:focus { outline: none; border-color: #335075; box-shadow: 0 0 0 3px rgba(51,80,117,0.08); }
+    .filter-select { width: auto; padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; font-family: inherit; color: #1a1a2e; background: #fff; cursor: pointer; }
+
+    /* ── Collapsible section-box ── */
+    .section-box.collapsible .section-box-hd { display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; margin-bottom: 0; }
+    .section-box.collapsible .section-box-hd h4 { margin-bottom: 0; }
+    .section-box.collapsible .section-box-body { margin-top: 12px; }
+    .section-box.collapsible.collapsed .section-box-body { display: none; }
+    .section-box.collapsible.collapsed { padding-bottom: 16px; }
+    .chevron { font-size: 13px; color: #9ca3af; transition: transform 0.18s; display: inline-block; }
+    .section-box.collapsible.collapsed .chevron { transform: rotate(-90deg); }
+
+    /* ── Targeting summary ── */
+    #targeting-summary { margin-top: 14px; font-size: 12px; color: #6b7280; background: #f8f9fb; border-radius: 8px; padding: 8px 12px; border-left: 3px solid #335075; display: none; }
+    #targeting-summary.visible { display: block; }
+
+    /* ── Top notif items clickable ── */
+    .top-notif-item.clickable { cursor: pointer; transition: background 0.12s; }
+    .top-notif-item.clickable:hover { background: #eef2f7; }
   </style>
 </head>
 <body>
@@ -249,7 +284,15 @@
     <div id="dashboard-view">
       <div class="view-header">
         <h2>All Notifications</h2>
-        <button class="btn btn-primary" id="new-btn">+ New notification</button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="text" id="search-input" class="search-input" placeholder="Search…" autocomplete="off">
+          <select id="filter-status" class="filter-select">
+            <option value="all">All statuses</option>
+            <option value="published">Published</option>
+            <option value="draft">Draft</option>
+          </select>
+          <button class="btn btn-primary" id="new-btn">+ New notification</button>
+        </div>
       </div>
       <div class="notif-table" id="notif-table-wrap">
         <div class="empty-state">
@@ -323,47 +366,58 @@
         </div>
 
         <!-- CTA Button -->
-        <div class="section-box">
-          <h4>Call-to-action button <span style="font-weight:400;color:#aaa">(optional)</span></h4>
-          <div class="desc">Add a button at the bottom of the notification that links somewhere.</div>
-          <div class="form-row">
-            <div class="form-group" style="margin-bottom:0">
-              <label>Button label</label>
-              <input type="text" id="f-cta-text" placeholder="e.g. Learn more, Try it now">
-            </div>
-            <div class="form-group" style="margin-bottom:0">
-              <label>Button URL</label>
-              <input type="url" id="f-cta-url" placeholder="https://...">
+        <div class="section-box collapsible collapsed" id="cta-section">
+          <div class="section-box-hd">
+            <h4>Call-to-action button <span style="font-weight:400;color:#aaa">(optional)</span></h4>
+            <span class="chevron">▾</span>
+          </div>
+          <div class="section-box-body">
+            <div class="desc" style="margin-bottom:14px">Add a button at the bottom of the notification that links somewhere.</div>
+            <div class="form-row">
+              <div class="form-group" style="margin-bottom:0">
+                <label>Button label</label>
+                <input type="text" id="f-cta-text" placeholder="e.g. Learn more, Try it now">
+              </div>
+              <div class="form-group" style="margin-bottom:0">
+                <label>Button URL</label>
+                <input type="url" id="f-cta-url" placeholder="https://...">
+              </div>
             </div>
           </div>
         </div>
 
         <!-- Targeting -->
-        <div class="section-box">
-          <h4>Audience targeting <span style="font-weight:400;color:#aaa">(optional)</span></h4>
-          <div class="desc">Leave blank to show to everyone. Add values to target specific users.</div>
-          <div class="form-row">
-            <div class="form-group" style="margin-bottom:0">
-              <label>Target roles</label>
-              <div class="tag-input-wrapper" id="roles-wrapper">
-                <input class="tag-input" id="roles-input" placeholder="e.g. admin, installer" autocomplete="off">
-              </div>
-              <div class="hint">Press Enter or comma to add. Matches <code>role</code> in <code>NotifWidget.init()</code>.</div>
-            </div>
-            <div class="form-group" style="margin-bottom:0">
-              <label>Target building types</label>
-              <div class="tag-input-wrapper" id="types-wrapper">
-                <input class="tag-input" id="types-input" placeholder="e.g. hotel, residential" autocomplete="off">
-              </div>
-              <div class="hint">Matches <code>buildingType</code> in <code>NotifWidget.init()</code>.</div>
-            </div>
+        <div class="section-box collapsible collapsed" id="targeting-section">
+          <div class="section-box-hd">
+            <h4>Audience targeting <span style="font-weight:400;color:#aaa">(optional)</span></h4>
+            <span class="chevron">▾</span>
           </div>
-          <div class="form-group" style="margin-bottom:0;margin-top:14px">
-            <label>Target specific user IDs <span style="font-weight:400;color:#aaa">(overrides role/type filters)</span></label>
-            <div class="tag-input-wrapper" id="userIds-wrapper">
-              <input class="tag-input" id="userIds-input" placeholder="e.g. user-123, demo-user-3" autocomplete="off">
+          <div class="section-box-body">
+            <div class="desc" style="margin-bottom:14px">All fields are <strong>AND</strong> — a user must match every non-empty field. Leave all blank to reach everyone.</div>
+            <div class="form-row">
+              <div class="form-group" style="margin-bottom:0">
+                <label>Target roles</label>
+                <div class="tag-input-wrapper" id="roles-wrapper">
+                  <input class="tag-input" id="roles-input" placeholder="e.g. admin, installer" autocomplete="off">
+                </div>
+                <div class="hint">Press Enter or comma to add. Matches <code>role</code> in <code>NotifWidget.init()</code>.</div>
+              </div>
+              <div class="form-group" style="margin-bottom:0">
+                <label>Target building types</label>
+                <div class="tag-input-wrapper" id="types-wrapper">
+                  <input class="tag-input" id="types-input" placeholder="e.g. hotel, residential" autocomplete="off">
+                </div>
+                <div class="hint">Matches <code>buildingType</code> in <code>NotifWidget.init()</code>.</div>
+              </div>
             </div>
-            <div class="hint">Press Enter or comma to add. Matches <code>userId</code> in <code>NotifWidget.init()</code>. Leave blank to use role/type targeting above.</div>
+            <div class="form-group" style="margin-bottom:0;margin-top:14px">
+              <label>Target specific user IDs</label>
+              <div class="tag-input-wrapper" id="userIds-wrapper">
+                <input class="tag-input" id="userIds-input" placeholder="e.g. user-123, demo-user-3" autocomplete="off">
+              </div>
+              <div class="hint">When set, <strong>only these users</strong> will see the notification. Leave blank to use role/type filters above.</div>
+            </div>
+            <div id="targeting-summary"></div>
           </div>
         </div>
 
@@ -491,6 +545,9 @@
 <!-- Toast -->
 <div id="admin-toast"></div>
 
+<!-- Floating kebab menu (shared, repositioned per row) -->
+<div id="kebab-menu"></div>
+
 <!-- ═══ ANALYTICS DETAIL MODAL ════════════════════════════════════════════════ -->
 <div id="detail-overlay">
   <div id="detail-modal">
@@ -547,6 +604,18 @@ var currentId    = null;
 var rolesTags    = [];
 var typesTags    = [];
 var userIdsTags  = [];
+var _searchQuery  = '';
+var _filterStatus = 'all';
+var _kebabId      = null;  // currently open kebab target id
+
+function _filteredNotifs() {
+  var q = _searchQuery.toLowerCase();
+  return _allNotifs.filter(function(n) {
+    var matchSearch = !q || (n.title || '').toLowerCase().indexOf(q) !== -1;
+    var matchStatus = _filterStatus === 'all' || n.status === _filterStatus;
+    return matchSearch && matchStatus;
+  });
+}
 var _readCounts     = {};
 var _feedbackCounts = {};  // { [notifId]: { up: N, down: M } }
 var _clickCounts    = {};  // { [notifId]: N }
@@ -583,12 +652,20 @@ document.getElementById('login-btn').addEventListener('click', function() {
 });
 document.getElementById('login-password').addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('login-btn').click(); });
 document.getElementById('logout-btn').addEventListener('click', function() { auth.signOut(); });
+document.getElementById('search-input').addEventListener('input', function() {
+  _searchQuery = this.value.trim();
+  renderTable(_filteredNotifs());
+});
+document.getElementById('filter-status').addEventListener('change', function() {
+  _filterStatus = this.value;
+  renderTable(_filteredNotifs());
+});
 
 // ═══ Load notifications ══════════════════════════════════════════════════════════
 function loadNotifications() {
   db.collection('notifications').orderBy('createdAt','desc').onSnapshot(function(snapshot) {
     _allNotifs = snapshot.docs.map(function(d) { return Object.assign({ id: d.id }, d.data()); });
-    renderTable(_allNotifs);
+    renderTable(_filteredNotifs());
     if (document.getElementById('analytics-view').style.display !== 'none') renderAnalytics();
   }, function(err) {
     console.error('[Admin] loadNotifications failed:', err);
@@ -607,7 +684,7 @@ function loadFeedback() {
       if (data.vote === 'up')        _feedbackCounts[data.notifId].up++;
       else if (data.vote === 'down') _feedbackCounts[data.notifId].down++;
     });
-    if (_allNotifs.length) renderTable(_allNotifs);
+    if (_allNotifs.length) renderTable(_filteredNotifs());
   }, function(err) {
     console.warn('[Admin] Feedback unavailable — check Firestore rules:', err.message);
   });
@@ -620,7 +697,7 @@ function loadClicks() {
     _allClicks.forEach(function(data) {
       if (data.notifId) _clickCounts[data.notifId] = (_clickCounts[data.notifId] || 0) + 1;
     });
-    if (_allNotifs.length) renderTable(_allNotifs);
+    if (_allNotifs.length) renderTable(_filteredNotifs());
   }, function(err) {
     console.warn('[Admin] Clicks unavailable — check Firestore rules:', err.message);
   });
@@ -633,7 +710,7 @@ function loadReadCounts() {
     _allReads.forEach(function(r) {
       if (r.notifId) _readCounts[r.notifId] = (_readCounts[r.notifId] || 0) + 1;
     });
-    if (_allNotifs.length) renderTable(_allNotifs);
+    if (_allNotifs.length) renderTable(_filteredNotifs());
     if (document.getElementById('analytics-view').style.display !== 'none') renderAnalytics();
   }, function(err) {
     console.warn('[Admin] Read counts unavailable — check Firestore rules:', err.message);
@@ -678,32 +755,22 @@ function renderTable(items) {
       '<td>' + readHtml + '</td>' +
       '<td>' + clicksHtml + '</td>' +
       '<td>' + feedbackHtml + '</td>' +
-      '<td><div class="tbl-actions">' +
-        '<button class="btn btn-ghost btn-sm" data-action="edit" data-id="' + esc(n.id) + '">Edit</button>' +
-        '<button class="btn btn-preview btn-sm" data-action="duplicate" data-id="' + esc(n.id) + '">Duplicate</button>' +
-        '<button class="btn btn-ghost btn-sm" data-action="details" data-id="' + esc(n.id) + '">Analytics</button>' +
-        (n.status !== 'published' ? '<button class="btn btn-success btn-sm" data-action="publish" data-id="' + esc(n.id) + '">Publish</button>' : '') +
-        '<button class="btn btn-danger btn-sm" data-action="delete" data-id="' + esc(n.id) + '">Delete</button>' +
-      '</div></td>' +
+      '<td style="text-align:right"><button class="kebab-btn" data-action="kebab" data-id="' + esc(n.id) + '">⋮</button></td>' +
     '</tr>';
   }).join('');
 
-  wrap.innerHTML = '<table><thead><tr><th>Title</th><th>Status</th><th>Category</th><th>Display</th><th>Scheduled for</th><th>Reads</th><th>Clicks</th><th>Feedback</th><th>Actions</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  wrap.innerHTML = '<table><thead><tr><th>Title</th><th>Status</th><th>Category</th><th>Display</th><th>Scheduled for</th><th>Reads</th><th>Clicks</th><th>Feedback</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
 }
 
 // ═══ Table action delegation ═════════════════════════════════════════════════════
 // Event delegation: one listener on the stable wrapper instead of per-row onclick handlers.
 document.getElementById('notif-table-wrap').addEventListener('click', function(e) {
-  var btn = e.target.closest('[data-action]');
+  var btn = e.target.closest('[data-action="kebab"]');
   if (!btn) return;
-  var action = btn.dataset.action;
-  var id     = btn.dataset.id;
+  var id = btn.dataset.id;
   if (!id) return;
-  if (action === 'edit')           editNotif(id);
-  else if (action === 'duplicate') duplicateNotif(id);
-  else if (action === 'details')   openDetail(id);
-  else if (action === 'publish')   publishNotif(id);
-  else if (action === 'delete')    deleteNotif(id);
+  if (_kebabId === id) { closeKebab(); return; }
+  openKebab(btn, id);
 });
 
 // ═══ Navigation ══════════════════════════════════════════════════════════════════
@@ -742,6 +809,18 @@ function openEditor(notif) {
   typesTags   = notif && notif.targetBuildingTypes ? notif.targetBuildingTypes.slice() : [];
   userIdsTags = notif && notif.targetUserIds       ? notif.targetUserIds.slice()       : [];
   renderTags('roles'); renderTags('types'); renderTags('userIds');
+
+  // Expand CTA section if it has content, otherwise collapse
+  var ctaHasContent = notif && (notif.ctaText || notif.ctaUrl);
+  document.getElementById('cta-section').classList.toggle('collapsed', !ctaHasContent);
+
+  // Expand targeting section if it has content, otherwise collapse
+  var targetHasContent = notif && (
+    (notif.targetRoles && notif.targetRoles.length) ||
+    (notif.targetBuildingTypes && notif.targetBuildingTypes.length) ||
+    (notif.targetUserIds && notif.targetUserIds.length)
+  );
+  document.getElementById('targeting-section').classList.toggle('collapsed', !targetHasContent);
 
   document.getElementById('dashboard-view').style.display = 'none';
   document.getElementById('editor-view').style.display = 'block';
@@ -782,6 +861,23 @@ function renderTags(type) {
     el.innerHTML = esc(tag) + '<button class="tag-remove" data-i="' + i + '" data-type="' + type + '">×</button>';
     wrapper.insertBefore(el, input);
   });
+  _updateTargetingSummary();
+}
+
+function _updateTargetingSummary() {
+  var el = document.getElementById('targeting-summary');
+  if (!el) return;
+  var parts = [];
+  if (userIdsTags.length)  parts.push('only users: <strong>' + userIdsTags.map(esc).join(', ') + '</strong>');
+  else {
+    if (rolesTags.length)  parts.push('role <strong>' + rolesTags.map(esc).join('</strong> or <strong>') + '</strong>');
+    if (typesTags.length)  parts.push('building type <strong>' + typesTags.map(esc).join('</strong> or <strong>') + '</strong>');
+  }
+  if (parts.length === 0) {
+    el.className = 'targeting-summary'; el.innerHTML = ''; return;
+  }
+  el.className = 'targeting-summary visible';
+  el.innerHTML = '→ Will show to ' + parts.join(' AND ');
 }
 
 document.getElementById('roles-wrapper').addEventListener('click', function() { document.getElementById('roles-input').focus(); });
@@ -801,10 +897,21 @@ document.getElementById('userIds-wrapper').addEventListener('click', function() 
 });
 
 document.addEventListener('click', function(e) {
+  // Tag remove
   if (e.target.classList.contains('tag-remove')) {
     var type = e.target.dataset.type, i = parseInt(e.target.dataset.i, 10);
     _getTagsArr(type).splice(i, 1);
     renderTags(type);
+  }
+  // Close kebab when clicking outside
+  if (!e.target.closest('#kebab-menu') && !e.target.closest('.kebab-btn')) {
+    closeKebab();
+  }
+  // Accordion toggle
+  var hd = e.target.closest('.section-box-hd');
+  if (hd) {
+    var box = hd.closest('.collapsible');
+    if (box) box.classList.toggle('collapsed');
   }
 });
 
@@ -886,6 +993,60 @@ function deleteNotif(id) {
     .then(function() { toast('Deleted.', 'success'); })
     .catch(function(err) { toast('Error: ' + err.message, 'error'); });
 }
+
+function unpublishNotif(id) {
+  db.collection('notifications').doc(id).update({ status: 'draft', updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
+    .then(function() { toast('Moved back to draft.', 'success'); })
+    .catch(function(err) { toast('Error: ' + err.message, 'error'); });
+}
+
+// ─── Kebab menu ───────────────────────────────────────────────────────────────
+function openKebab(btn, id) {
+  var n = _allNotifs.find(function(x) { return x.id === id; });
+  if (!n) return;
+  var menu = document.getElementById('kebab-menu');
+  menu.innerHTML =
+    _kmItem('edit',      '✏️',  'Edit') +
+    _kmItem('duplicate', '⧉',  'Duplicate') +
+    _kmItem('details',   '📊', 'Analytics') +
+    '<div class="km-sep"></div>' +
+    (n.status !== 'published'
+      ? _kmItem('publish',   '✓',  'Publish',   'success')
+      : _kmItem('unpublish', '↩', 'Unpublish')) +
+    '<div class="km-sep"></div>' +
+    _kmItem('delete', '🗑', 'Delete', 'danger');
+  menu.querySelectorAll('.km-item').forEach(function(item) { item.dataset.id = id; });
+  menu.classList.add('open');
+  var rect = btn.getBoundingClientRect();
+  var menuW = menu.offsetWidth;
+  menu.style.top  = (rect.bottom + 4) + 'px';
+  menu.style.left = Math.max(8, rect.right - menuW) + 'px';
+  _kebabId = id;
+}
+
+function closeKebab() {
+  document.getElementById('kebab-menu').classList.remove('open');
+  _kebabId = null;
+}
+
+function _kmItem(action, icon, label, variant) {
+  var cls = 'km-item' + (variant ? ' km-' + variant : '');
+  return '<button class="' + cls + '" data-action="' + action + '">' + icon + ' ' + label + '</button>';
+}
+
+document.getElementById('kebab-menu').addEventListener('click', function(e) {
+  var item = e.target.closest('.km-item');
+  if (!item) return;
+  var action = item.dataset.action, id = item.dataset.id;
+  closeKebab();
+  if (!id) return;
+  if      (action === 'edit')      editNotif(id);
+  else if (action === 'duplicate') duplicateNotif(id);
+  else if (action === 'details')   openDetail(id);
+  else if (action === 'publish')   publishNotif(id);
+  else if (action === 'unpublish') unpublishNotif(id);
+  else if (action === 'delete')    deleteNotif(id);
+});
 
 // ═══ Preview ═════════════════════════════════════════════════════════════════════
 document.getElementById('preview-btn').addEventListener('click', function() {
@@ -1174,7 +1335,7 @@ function renderAnalytics() {
       var catHtml = catDef ? '<span style="background:' + catDef.color + ';color:#fff;font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;margin-left:6px">' + catDef.label + '</span>' : '';
       var clicks  = _clickCounts[item.n.id] || 0;
       var ctrPct  = item.reads > 0 ? Math.round(clicks / item.reads * 100) : 0;
-      return '<div class="top-notif-item">' +
+      return '<div class="top-notif-item clickable" data-notif-id="' + esc(item.n.id) + '">' +
         '<div class="top-notif-rank">#' + (i + 1) + '</div>' +
         '<div class="top-notif-info">' +
           '<div class="top-notif-title">' + esc(item.n.title || '(no title)') + catHtml + '</div>' +
@@ -1188,6 +1349,12 @@ function renderAnalytics() {
     }).join('');
   }
 }
+
+// Click on top-notif-list items → open detail modal
+document.getElementById('top-notif-list').addEventListener('click', function(e) {
+  var item = e.target.closest('[data-notif-id]');
+  if (item) openDetail(item.dataset.notifId);
+});
 </script>
 </body>
 </html>
