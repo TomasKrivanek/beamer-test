@@ -750,7 +750,10 @@
       btn.className = 'nw-cta-btn'; btn.href = _safeUrl(n.ctaUrl);
       btn.target = '_blank'; btn.rel = 'noopener noreferrer';
       btn.textContent = n.ctaText;
-      btn.addEventListener('click', function () { _trackClick(n.id); });
+      btn.addEventListener('click', function () {
+        console.log('[NotifWidget] CTA clicked, notifId:', n.id, 'userId:', _config.userId);
+        _trackClick(n.id);
+      });
       footer.insertBefore(btn, footer.querySelector('.nw-feedback'));
     }
     _renderFeedback(n.id, document.getElementById('nw-modal-feedback'));
@@ -778,7 +781,10 @@
       btn.className = 'nw-cta-btn'; btn.href = _safeUrl(n.ctaUrl);
       btn.target = '_blank'; btn.rel = 'noopener noreferrer';
       btn.textContent = n.ctaText;
-      btn.addEventListener('click', function () { _trackClick(n.id); });
+      btn.addEventListener('click', function () {
+        console.log('[NotifWidget] CTA clicked, notifId:', n.id, 'userId:', _config.userId);
+        _trackClick(n.id);
+      });
       footer.insertBefore(btn, footer.querySelector('.nw-feedback'));
     }
     _renderFeedback(n.id, document.getElementById('nw-fs-feedback'));
