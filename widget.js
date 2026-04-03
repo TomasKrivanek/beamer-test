@@ -73,6 +73,7 @@
       _loadScript(DOMPURIFY_CDN, function () {
         _renderWidget();
         _subscribeToNotifications();
+        _syncReadStateFromFirestore();
         setInterval(_applyFilters, REFILTER_INTERVAL_MS);
       });
     });
@@ -150,6 +151,23 @@
     if (roles.length > 0 && _config.role && roles.indexOf(_config.role) === -1) return false;
     if (types.length > 0 && _config.buildingType && types.indexOf(_config.buildingType) === -1) return false;
     return true;
+  }
+
+  // ─── Firestore Read Sync ─────────────────────────────────────────────────────
+  // Hydrates _readIds from Firestore so read state is shared across devices/sessions.
+  // localStorage is still used for instant first render; Firestore corrects it.
+  function _syncReadStateFromFirestore() {
+    if (!_db) return;
+    _db.collection('reads').where('userId', '==', _config.userId).get()
+      .then(function (snap) {
+        var changed = false;
+        snap.docs.forEach(function (d) {
+          var id = d.data().notifId;
+          if (id && !_readIds.has(id)) { _readIds.add(id); changed = true; }
+        });
+        if (changed) { _saveReadState(); _updateBadge(); _renderNotifications(); }
+      })
+      .catch(function (err) { console.warn('[NotifWidget] Read sync failed:', err.message); });
   }
 
   // ─── Read State ──────────────────────────────────────────────────────────────
@@ -732,6 +750,7 @@
       btn.className = 'nw-cta-btn'; btn.href = _safeUrl(n.ctaUrl);
       btn.target = '_blank'; btn.rel = 'noopener noreferrer';
       btn.textContent = n.ctaText;
+      btn.addEventListener('click', function () { _trackClick(n.id); });
       footer.insertBefore(btn, footer.querySelector('.nw-feedback'));
     }
     _renderFeedback(n.id, document.getElementById('nw-modal-feedback'));
@@ -759,6 +778,7 @@
       btn.className = 'nw-cta-btn'; btn.href = _safeUrl(n.ctaUrl);
       btn.target = '_blank'; btn.rel = 'noopener noreferrer';
       btn.textContent = n.ctaText;
+      btn.addEventListener('click', function () { _trackClick(n.id); });
       footer.insertBefore(btn, footer.querySelector('.nw-feedback'));
     }
     _renderFeedback(n.id, document.getElementById('nw-fs-feedback'));
@@ -857,6 +877,17 @@
   }
   function _absTime(ts) {
     return _toDate(ts).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  // ─── CTA Click Tracking ───────────────────────────────────────────────────────
+  // One document per user per notification; repeated clicks update the timestamp.
+  function _trackClick(notifId) {
+    if (!_db) return;
+    _db.collection('clicks').doc(notifId + '_' + _config.userId).set({
+      notifId:   notifId,
+      userId:    _config.userId,
+      clickedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(function (err) { console.error('[NotifWidget] Click tracking failed:', err.message); });
   }
 
   // ─── Feedback ─────────────────────────────────────────────────────────────────
