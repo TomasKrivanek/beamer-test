@@ -146,10 +146,14 @@
   }
 
   function _matchesUser(n) {
-    var roles = n.targetRoles || [];
-    var types = n.targetBuildingTypes || [];
-    if (roles.length > 0 && _config.role && roles.indexOf(_config.role) === -1) return false;
-    if (types.length > 0 && _config.buildingType && types.indexOf(_config.buildingType) === -1) return false;
+    var roles   = n.targetRoles         || [];
+    var types   = n.targetBuildingTypes || [];
+    var userIds = n.targetUserIds       || [];
+    // All non-empty targeting arrays are ANDed.
+    // If the user's attribute is missing and the array is non-empty, they don't match.
+    if (userIds.length > 0 && userIds.indexOf(_config.userId) === -1) return false;
+    if (roles.length   > 0 && roles.indexOf(_config.role || '')          === -1) return false;
+    if (types.length   > 0 && types.indexOf(_config.buildingType || '')  === -1) return false;
     return true;
   }
 

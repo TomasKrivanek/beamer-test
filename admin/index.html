@@ -183,7 +183,7 @@
     /* ── Analytics view ── */
     #analytics-view { display: none; }
 
-    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
     .kpi-card { background: #fff; border-radius: 10px; padding: 18px 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); border: 1px solid #e5e8ec; }
     .kpi-label { font-size: 12px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
     .kpi-value { font-size: 28px; font-weight: 700; color: #1a1a2e; line-height: 1; margin-bottom: 4px; }
@@ -358,6 +358,13 @@
               <div class="hint">Matches <code>buildingType</code> in <code>NotifWidget.init()</code>.</div>
             </div>
           </div>
+          <div class="form-group" style="margin-bottom:0;margin-top:14px">
+            <label>Target specific user IDs <span style="font-weight:400;color:#aaa">(overrides role/type filters)</span></label>
+            <div class="tag-input-wrapper" id="userIds-wrapper">
+              <input class="tag-input" id="userIds-input" placeholder="e.g. user-123, demo-user-3" autocomplete="off">
+            </div>
+            <div class="hint">Press Enter or comma to add. Matches <code>userId</code> in <code>NotifWidget.init()</code>. Leave blank to use role/type targeting above.</div>
+          </div>
         </div>
 
         <div class="editor-actions">
@@ -443,9 +450,19 @@
         <div class="kpi-sub">per notification</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Top category</div>
-        <div class="kpi-value" style="font-size:18px" id="kpi-top-cat">—</div>
-        <div class="kpi-sub">by reads</div>
+        <div class="kpi-label">Total clicks</div>
+        <div class="kpi-value" id="kpi-clicks">—</div>
+        <div class="kpi-sub">CTA button clicks</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Click-through rate</div>
+        <div class="kpi-value" id="kpi-ctr">—</div>
+        <div class="kpi-sub">clicks ÷ reads</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Feedback</div>
+        <div class="kpi-value" style="font-size:18px" id="kpi-feedback">—</div>
+        <div class="kpi-sub">helpful votes</div>
       </div>
     </div>
 
@@ -526,9 +543,10 @@ var quill = new Quill('#quill-editor', {
 });
 
 // ═══ State ══════════════════════════════════════════════════════════════════════
-var currentId  = null;
-var rolesTags  = [];
-var typesTags  = [];
+var currentId    = null;
+var rolesTags    = [];
+var typesTags    = [];
+var userIdsTags  = [];
 var _readCounts     = {};
 var _feedbackCounts = {};  // { [notifId]: { up: N, down: M } }
 var _clickCounts    = {};  // { [notifId]: N }
@@ -643,8 +661,16 @@ function renderTable(items) {
     var modeLabel  = { badge:'🔔 Badge', toast:'💬 Toast', fullscreen:'🖥 Full screen' };
     var displayLbl = modeLabel[n.displayMode] || '💬 Toast';
 
+    var targetParts = [];
+    if (n.targetUserIds && n.targetUserIds.length)       targetParts.push('🔑 ' + n.targetUserIds.join(', '));
+    if (n.targetRoles && n.targetRoles.length)           targetParts.push('👤 ' + n.targetRoles.join(', '));
+    if (n.targetBuildingTypes && n.targetBuildingTypes.length) targetParts.push('🏢 ' + n.targetBuildingTypes.join(', '));
+    var targetHtml = targetParts.length
+      ? '<div style="font-size:11px;color:#9ca3af;margin-top:3px">' + esc(targetParts.join(' · ')) + '</div>'
+      : '<div style="font-size:11px;color:#d1d5db;margin-top:3px">All users</div>';
+
     return '<tr>' +
-      '<td><strong>' + esc(n.title || '(no title)') + '</strong></td>' +
+      '<td><strong>' + esc(n.title || '(no title)') + '</strong>' + targetHtml + '</td>' +
       '<td><span class="status-badge ' + statusCls + '">' + (n.status || 'draft') + '</span></td>' +
       '<td>' + catHtml + '</td>' +
       '<td style="font-size:12px;color:#555">' + displayLbl + '</td>' +
@@ -712,9 +738,10 @@ function openEditor(notif) {
     document.getElementById('f-expires').value = '';
   }
 
-  rolesTags = notif && notif.targetRoles ? notif.targetRoles.slice() : [];
-  typesTags = notif && notif.targetBuildingTypes ? notif.targetBuildingTypes.slice() : [];
-  renderTags('roles'); renderTags('types');
+  rolesTags   = notif && notif.targetRoles         ? notif.targetRoles.slice()         : [];
+  typesTags   = notif && notif.targetBuildingTypes ? notif.targetBuildingTypes.slice() : [];
+  userIdsTags = notif && notif.targetUserIds       ? notif.targetUserIds.slice()       : [];
+  renderTags('roles'); renderTags('types'); renderTags('userIds');
 
   document.getElementById('dashboard-view').style.display = 'none';
   document.getElementById('editor-view').style.display = 'block';
@@ -740,8 +767,12 @@ function duplicateNotif(id) {
 }
 
 // ═══ Tags ════════════════════════════════════════════════════════════════════════
+function _getTagsArr(type) {
+  return type === 'roles' ? rolesTags : type === 'types' ? typesTags : userIdsTags;
+}
+
 function renderTags(type) {
-  var tags    = type === 'roles' ? rolesTags : typesTags;
+  var tags    = _getTagsArr(type);
   var wrapper = document.getElementById(type + '-wrapper');
   var input   = document.getElementById(type + '-input');
   wrapper.querySelectorAll('.tag').forEach(function(el) { el.remove(); });
@@ -755,13 +786,14 @@ function renderTags(type) {
 
 document.getElementById('roles-wrapper').addEventListener('click', function() { document.getElementById('roles-input').focus(); });
 document.getElementById('types-wrapper').addEventListener('click', function() { document.getElementById('types-input').focus(); });
+document.getElementById('userIds-wrapper').addEventListener('click', function() { document.getElementById('userIds-input').focus(); });
 
-['roles','types'].forEach(function(type) {
+['roles','types','userIds'].forEach(function(type) {
   var input = document.getElementById(type + '-input');
   input.addEventListener('keydown', function(e) {
     if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(type, input.value); }
     else if (e.key === 'Backspace' && input.value === '') {
-      var tags = type === 'roles' ? rolesTags : typesTags;
+      var tags = _getTagsArr(type);
       if (tags.length) { tags.pop(); renderTags(type); }
     }
   });
@@ -771,15 +803,16 @@ document.getElementById('types-wrapper').addEventListener('click', function() { 
 document.addEventListener('click', function(e) {
   if (e.target.classList.contains('tag-remove')) {
     var type = e.target.dataset.type, i = parseInt(e.target.dataset.i, 10);
-    (type === 'roles' ? rolesTags : typesTags).splice(i, 1);
+    _getTagsArr(type).splice(i, 1);
     renderTags(type);
   }
 });
 
 function addTag(type, raw) {
-  var tags  = type === 'roles' ? rolesTags : typesTags;
+  var tags  = _getTagsArr(type);
   var input = document.getElementById(type + '-input');
-  var val   = raw.replace(/,/g,'').trim().toLowerCase();
+  // userId tags preserve case; role/type tags are lowercased
+  var val   = type === 'userIds' ? raw.replace(/,/g,'').trim() : raw.replace(/,/g,'').trim().toLowerCase();
   if (val && tags.indexOf(val) === -1) { tags.push(val); renderTags(type); }
   input.value = '';
 }
@@ -818,6 +851,7 @@ function saveNotif(overrideStatus) {
     ctaUrl:              ctaUrl,
     targetRoles:         rolesTags,
     targetBuildingTypes: typesTags,
+    targetUserIds:       userIdsTags,
     updatedAt:           firebase.firestore.FieldValue.serverTimestamp(),
     updatedBy:           user ? user.email : 'unknown'
   };
@@ -1018,38 +1052,42 @@ document.getElementById('tab-analytics').addEventListener('click', function() {
 
 // ═══ Analytics ════════════════════════════════════════════════════════════════
 function renderAnalytics() {
-  var published = _allNotifs.filter(function(n) { return n.status === 'published'; });
+  var published  = _allNotifs.filter(function(n) { return n.status === 'published'; });
   var totalReads = _allReads.length;
+  var totalClicks = _allClicks.length;
   var avgReads   = published.length ? (totalReads / published.length).toFixed(1) : '0';
-
-  // Top category by reads
-  var catReads = {};
-  _allReads.forEach(function(r) {
-    var n = _allNotifs.find(function(x) { return x.id === r.notifId; });
-    if (n && n.category) catReads[n.category] = (catReads[n.category] || 0) + 1;
-  });
-  var topCatKey = Object.keys(catReads).sort(function(a,b) { return catReads[b] - catReads[a]; })[0];
-  var topCatLabel = topCatKey && CATEGORIES[topCatKey] ? CATEGORIES[topCatKey].label : '—';
+  var ctr        = totalReads > 0 ? Math.round(totalClicks / totalReads * 100) + '%' : '—';
+  var totalUp    = _allFeedback.filter(function(f) { return f.vote === 'up'; }).length;
+  var totalDown  = _allFeedback.filter(function(f) { return f.vote === 'down'; }).length;
 
   // KPI cards
   document.getElementById('kpi-published').textContent = published.length;
   document.getElementById('kpi-reads').textContent     = totalReads;
   document.getElementById('kpi-avg').textContent       = avgReads;
-  document.getElementById('kpi-top-cat').textContent   = topCatLabel;
+  document.getElementById('kpi-clicks').textContent    = totalClicks;
+  document.getElementById('kpi-ctr').textContent       = ctr;
+  document.getElementById('kpi-feedback').textContent  = '👍 ' + totalUp + '  👎 ' + totalDown;
 
   // ── Timeline chart (last 14 days) ──
   var days = [];
   var dayCounts = {};
+  var clickDayCounts = {};
   for (var i = 13; i >= 0; i--) {
     var d = new Date(); d.setDate(d.getDate() - i);
     var key = d.toISOString().slice(0, 10);
-    days.push(key); dayCounts[key] = 0;
+    days.push(key); dayCounts[key] = 0; clickDayCounts[key] = 0;
   }
   _allReads.forEach(function(r) {
     if (!r.readAt) return;
     var d = r.readAt.toDate ? r.readAt.toDate() : new Date(r.readAt);
     var key = d.toISOString().slice(0, 10);
     if (dayCounts[key] !== undefined) dayCounts[key]++;
+  });
+  _allClicks.forEach(function(c) {
+    if (!c.clickedAt) return;
+    var d = c.clickedAt.toDate ? c.clickedAt.toDate() : new Date(c.clickedAt);
+    var key = d.toISOString().slice(0, 10);
+    if (clickDayCounts[key] !== undefined) clickDayCounts[key]++;
   });
   var timelineLabels = days.map(function(d) {
     var dt = new Date(d + 'T12:00:00');
@@ -1061,11 +1099,17 @@ function renderAnalytics() {
     type: 'line',
     data: {
       labels: timelineLabels,
-      datasets: [{ label: 'Reads', data: days.map(function(d) { return dayCounts[d]; }),
-        borderColor: '#335075', backgroundColor: 'rgba(51,80,117,0.08)',
-        borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#335075', fill: true, tension: 0.3 }]
+      datasets: [
+        { label: 'Reads', data: days.map(function(d) { return dayCounts[d]; }),
+          borderColor: '#335075', backgroundColor: 'rgba(51,80,117,0.08)',
+          borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#335075', fill: true, tension: 0.3 },
+        { label: 'Clicks', data: days.map(function(d) { return clickDayCounts[d]; }),
+          borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.06)',
+          borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#10b981', fill: true, tension: 0.3 }
+      ]
     },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: true, position: 'top', labels: { padding: 16, font: { size: 12 }, boxWidth: 12 } } },
       scales: { y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#f0f0f0' } },
                 x: { grid: { display: false } } } }
   });
@@ -1128,13 +1172,18 @@ function renderAnalytics() {
     listEl.innerHTML = ranked.map(function(item, i) {
       var catDef = item.n.category && CATEGORIES[item.n.category];
       var catHtml = catDef ? '<span style="background:' + catDef.color + ';color:#fff;font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;margin-left:6px">' + catDef.label + '</span>' : '';
+      var clicks  = _clickCounts[item.n.id] || 0;
+      var ctrPct  = item.reads > 0 ? Math.round(clicks / item.reads * 100) : 0;
       return '<div class="top-notif-item">' +
         '<div class="top-notif-rank">#' + (i + 1) + '</div>' +
         '<div class="top-notif-info">' +
           '<div class="top-notif-title">' + esc(item.n.title || '(no title)') + catHtml + '</div>' +
           '<div class="top-notif-meta">' + fmtDate(item.n.scheduledFor) + '</div>' +
         '</div>' +
-        '<div class="top-notif-reads">' + item.reads + ' reads</div>' +
+        '<div style="text-align:right;flex-shrink:0">' +
+          '<div class="top-notif-reads">' + item.reads + ' reads</div>' +
+          '<div style="font-size:11px;color:#10b981;font-weight:600;margin-top:2px">' + clicks + ' clicks · ' + ctrPct + '% CTR</div>' +
+        '</div>' +
       '</div>';
     }).join('');
   }
